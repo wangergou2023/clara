@@ -36,13 +36,22 @@ make buildAssistant
 
 4. Run the assistant:
 ```bash
+./clara
+```
+
+If you don't wish to build the assistant binary you can run it directly with:
+```bash
 go run main.go
 ```
+However, you will still need to compile the plugins with `make rebuild` before running the assistant.
 
 ## Usage
 
-Start a conversation with the assistant, and it will guide you through. Here's an example:
+Start a conversation with the assistant by typing `./clara` in the terminal. You can then enter commands in natural language to interact with the assistant.
 
+You can ask the assistant what functions is has available by using natural language commands such as:
+- "What are your functions?"
+- "What can I ask you to do?"
 
 
 ## Known Issues
@@ -51,11 +60,7 @@ Start a conversation with the assistant, and it will guide you through. Here's a
 
 ## Future Enhancements & Missing Features
 
-- **Plugin Marketplace**: A dedicated marketplace to search, install, and manage plugins.
-
-- **Persistent Memory**: Store user tasks and other data across sessions.
-
-- **Multilingual Support**: Expand the assistant's capabilities to understand and respond in multiple languages.
+- support for the assistant to create and load it's own plugins at runtime if it doesn't have a plugin for a given function (e.g. if the user asks the assistant to do something it doesn't know how to do, it can create a plugin for that function and then execute it)
 
 ## Contribution
 
@@ -63,4 +68,4 @@ Contributions are always welcome! See [CONTRIBUTING.md](./CONTRIBUTING.md) for w
 
 ## License
 
-This project is licensed under the XYZ License - see the [LICENSE.md](LICENSE.md) file for details.
+This project is licensed under the MIT License
