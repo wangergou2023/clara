@@ -3,7 +3,10 @@ package assistant
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strconv"
 
+	"github.com/inancgumus/screen"
 	"github.com/jjkirkpatrick/clara/config"
 	"github.com/jjkirkpatrick/clara/plugins"
 	"github.com/logrusorgru/aurora"
@@ -64,8 +67,6 @@ func (assistant assistant) Message(message string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	fmt.Println("Response: ", response)
 
 	// append the assistant message to the conversation
 	appendMessage(openai.ChatMessageRoleAssistant, response, "")
@@ -135,8 +136,9 @@ func (assistant assistant) sendRequestToOpenAI() (*openai.ChatCompletionResponse
 			FunctionCall: "auto",
 		},
 	)
+
 	if err != nil {
-		return nil, err
+		assistant.openaiError(err)
 	}
 	return &resp, err
 }
@@ -167,5 +169,40 @@ func (chatBot assistant) writeConversationToScreen() {
 			fmt.Println(aurora.BrightMagenta("AI: " + message.Content))
 		}
 		fmt.Println()
+	}
+}
+
+type OpenAIError struct {
+	StatusCode int
+}
+
+func parseOpenAIError(err error) *OpenAIError {
+	var statusCode int
+
+	reStatusCode := regexp.MustCompile(`status code: (\d+)`)
+
+	if match := reStatusCode.FindStringSubmatch(err.Error()); match != nil {
+		statusCode, _ = strconv.Atoi(match[1]) // Convert string to int
+	}
+
+	return &OpenAIError{
+		StatusCode: statusCode,
+	}
+}
+
+func (assistant assistant) openaiError(err error) {
+	parsedError := parseOpenAIError(err)
+
+	switch parsedError.StatusCode {
+	case 401:
+		screen.Clear()
+		screen.MoveTopLeft()
+
+		fmt.Println("Invalid OpenAI API key. Please enter a valid key.")
+		fmt.Println("You can find your API key at https://beta.openai.com/account/api-keys")
+		fmt.Println("You can also set your API key as an environment variable named OPENAI_API_KEY")
+	default:
+		// Handle other errors
+		fmt.Println("Unknown error: ", parsedError.StatusCode)
 	}
 }

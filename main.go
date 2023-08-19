@@ -33,12 +33,12 @@ func main() {
 
 	functionDefinitions := plugins.GenerateOpenAIFunctionsDefinition()
 
-	javis := assistant.Start(cfg, openaiClient, functionDefinitions)
+	clara := assistant.Start(cfg, openaiClient, functionDefinitions)
 
 	for {
 
 		message := assistant.GetUserMessage("")
-		javis.Message(message)
+		clara.Message(message)
 	}
 
 }
