@@ -1,6 +1,5 @@
-"# clara" 
+To do, 
 
+currently no way to introduce time in to memories i,e tomorrow i need to do something, or What do i need to do tomorrow.
 
-TODO: Ability to Delete things from memory
-TODO: Ability to have deeper levels of memory (i.e. nested lists)
-TODO: Ability to Have plugins
+plugins should be able to be chained together, i.e, if the user says "Tomorrow i need to do something" the plugin should be able to say "Ok, i will remind you to do something tomorrow" and use the date/time plugin to get tomorrow date, and then store the date in the memory using the memory plugin.
