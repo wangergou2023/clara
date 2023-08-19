@@ -21,13 +21,12 @@ type MalvusCfg struct {
 func New() Cfg {
 
 	malvusCfg := MalvusCfg{
-		apiKey:         "fece80a7dc4ef3a041f09cb9db27119d6d12a8c65ca182ad7cc0ed595e981f2beed2e20c0a328062eb7c52838f6b0e8fed4a4c55",
-		apiEndpoint:    "localhost:19530", //"https://in03-4082eb33e7b209a.api.gcp-us-west1.zillizcloud.com/v1/",
+		apiEndpoint:    "localhost:19530",
 		collectionName: "CGPTMemory",
 	}
 
 	return Cfg{
-		openAiAPIKey:    "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",
+		openAiAPIKey:    "",
 		openAiModel:     "gpt-4",
 		supervisedModel: false,
 		debugMode:       false,
