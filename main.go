@@ -31,6 +31,11 @@ func main() {
 		log.Fatalf("Failed to load plugins: %v", err)
 	}
 
+	startAssistant()
+
+}
+
+func startAssistant() {
 	functionDefinitions := plugins.GenerateOpenAIFunctionsDefinition()
 
 	clara := assistant.Start(cfg, openaiClient, functionDefinitions)

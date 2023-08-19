@@ -23,6 +23,10 @@ Extensible AI assistant that seamlessly interacts with various plugins to fulfil
 
 ![Memory example](Clara-memorygif.gif)
 
+- **Self plugin creation**: The assistant can create and load it's own plugins at runtime if it doesn't have a plugin for a given function (e.g. if the user asks the assistant to do something it doesn't know how to do, it can create a plugin for that function and then execute it)
+
+![Plugin creation example](Clara-createplugingif.gif)
+
 ## Installation & Setup
 
 1. Clone the repository:

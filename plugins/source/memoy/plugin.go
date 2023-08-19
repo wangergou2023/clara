@@ -43,12 +43,6 @@ func (c *Memory) Init(cfg config.Cfg, openaiClient *openai.Client) error {
 	c.openaiClient = openaiClient
 
 	ctx := context.Background()
-	//config := milvus.Config{
-	//	Address:       cfg.MalvusApiEndpoint(), // Cluster endpoint.
-	//	Identifier:    "myconnection",          // Identifier for this connection.
-	//	EnableTLSAuth: true,                    // Enable TLS Auth for transport security.
-	//	APIKey:        cfg.MalvusApiKey(),      // API key.
-	//}
 
 	c.milvusClient, _ = milvus.NewGrpcClient(ctx, c.cfg.MalvusApiEndpoint())
 
