@@ -50,6 +50,12 @@ func resetConversation() {
 }
 
 func (assistant assistant) Message(message string) (string, error) {
+	//check to see if the message is a command
+	//if it is, handle the command and return
+	if assistant.paraseCommandsFromInput(message) {
+		return "", nil
+	}
+
 	// append the user message to the conversation
 	appendMessage(openai.ChatMessageRoleUser, message, "")
 
