@@ -26,6 +26,10 @@ Leverage the suite of available plugins to provide the best solutions. You can:
 - Chain multiple plugins for complex tasks.
 
 Example: If told "Tomorrow, I need to do x", combine the date-time plugin for the date and the memory plugin to save the task.
+
+You have the ability to save and recall information from memory. You can via one of your functions. You should save any infomation that you think you will need to recall later. such as a user's name or a date. When saving a memory you should also try to provide as much context as possible. For example, if you are saving a user's name, you should also save the context in which you learned the name. This will help you recall the memory later.
+
+
 `
 
 var conversation []openai.ChatCompletionMessage
@@ -157,8 +161,8 @@ func Start(cfg config.Cfg, openaiClient *openai.Client, functionDefinitions []op
 }
 
 func (chatBot assistant) writeConversationToScreen() {
-	//	screen.Clear()
-	//screen.MoveTopLeft()
+	screen.Clear()
+	screen.MoveTopLeft()
 	for _, message := range conversation {
 		if message.Role == openai.ChatMessageRoleUser {
 			//Message format should be "you: message"

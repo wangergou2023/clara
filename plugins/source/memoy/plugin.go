@@ -34,7 +34,7 @@ type memoryResult struct {
 
 type inputDefinition struct {
 	RequestType  string
-	Memory       string
+	Memories     []string
 	Num_relevant int
 }
 
@@ -72,24 +72,27 @@ func (c Memory) Description() string {
 func (c Memory) FunctionDefinition() openai.FunctionDefinition {
 	return openai.FunctionDefinition{
 		Name:        "memory",
-		Description: "store and retrieve memories from long term memory. use requestType set to add a memory to the database, use requestType get to retrieve the most relevant memories.",
+		Description: "store and retrieve memories from long term memory. use requestType set to add memories to the database, use requestType get to retrieve the most relevant memories.",
 		Parameters: jsonschema.Definition{
 			Type: jsonschema.Object,
 			Properties: map[string]jsonschema.Definition{
 				"requestType": {
 					Type:        jsonschema.String,
-					Description: "the type of request to make either set or get, set will add a memory to the database, get will return the most relevant memories",
+					Description: "the type of request to make either set or get, set will add memories to the database, get will return the most relevant memories",
 				},
-				"memory": {
-					Type:        jsonschema.String,
-					Description: "the memory to add or get, example: I like to eat pizza",
+				"memories": {
+					Type: jsonschema.Array,
+					Items: &jsonschema.Definition{
+						Type: jsonschema.String,
+					},
+					Description: "the memories to add or get, example: ['I like to eat pizza', 'I have a cat'] for each memory you want to set you should provde as much context as possible to go along with the memory.",
 				},
 				"num_relevant": {
 					Type:        jsonschema.Integer,
 					Description: "the number of relevant memories to return, example: 5",
 				},
 			},
-			Required: []string{"requestType", "memory"},
+			Required: []string{"requestType", "memories"}, // ensure "memories" is required
 		},
 	}
 }
@@ -106,29 +109,35 @@ func (c Memory) Execute(jsonInput string) (string, error) {
 		args.Num_relevant = 5
 	}
 
-	if args.Memory == "" {
-		return fmt.Sprintf(`%v`, "memory is required but was empty"), nil
+	// Check if memories slice is empty
+	if len(args.Memories) == 0 {
+		return fmt.Sprintf(`%v`, "memories are required but was empty"), nil
 	}
 
 	switch args.RequestType {
 	case "set":
-		ok, err := c.setMemory(args.Memory)
-		if err != nil {
-			return fmt.Sprintf(`%v`, err), err
+		// Iterate over all memories and set them
+		for _, memory := range args.Memories {
+			ok, err := c.setMemory(memory)
+			if err != nil {
+				return fmt.Sprintf(`%v`, err), err
+			}
+			if !ok {
+				return "Failed to set a memory", nil
+			}
 		}
-		if ok {
-			return fmt.Sprintf(`%v`, "Memory set successfully"), nil
-		}
+		return "Memories set successfully", nil
 
 	case "get":
-		memoryResponse, err := c.getMemory(args.Memory, args.Num_relevant)
+		// Note: This assumes that for 'get', you'll retrieve memories based on the first item in the memories slice. Adjust as needed.
+		memoryResponse, err := c.getMemory(args.Memories[0], args.Num_relevant)
 		if err != nil {
 			return fmt.Sprintf(`%v`, err), err
 		}
-		return fmt.Sprintf(`%v}`, memoryResponse), nil
+		return fmt.Sprintf(`%v`, memoryResponse), nil
+
 	default:
 		return "unknown request type check out Example for how to use the memory plug", nil
-
 	}
 
 	return "", nil

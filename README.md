@@ -19,6 +19,10 @@ Extensible AI assistant that seamlessly interacts with various plugins to fulfil
   
 - **Conversational Interface**: Color-coded roles and an interactive design ensure clear communication.
 
+- **Persistant long term memory**: The assistant remembers information from previous conversations to provide a more personalized experience. via a Vector database (Milvus)
+
+![Memory example](Clara-memorygif.gif)
+
 ## Installation & Setup
 
 1. Clone the repository:
