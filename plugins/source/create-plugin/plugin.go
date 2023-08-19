@@ -21,11 +21,10 @@ var Plugin plugins.Plugin = &CreatePlugin{}
 
 const MaxRetries = 3
 
-var conversation = []openai.ChatCompletionMessage{}
-
 type CreatePlugin struct {
 	cfg          config.Cfg
 	openaiClient *openai.Client
+	conversation []openai.ChatCompletionMessage
 }
 
 func (c *CreatePlugin) Init(cfg config.Cfg, openaiClient *openai.Client) error {
@@ -60,43 +59,45 @@ func (c CreatePlugin) FunctionDefinition() openai.FunctionDefinition {
 }
 
 func (c CreatePlugin) Execute(jsonInput string) (string, error) {
-	var args map[string]any
+	var args map[string]interface{} // Fixing the typo here
 	err := json.Unmarshal([]byte(jsonInput), &args)
 	if err != nil {
-		return fmt.Sprint("Error unmarshalling jsonInput: %v", err), nil
+		return "", fmt.Errorf("error unmarshalling jsonInput: %v", err)
 	}
 
-	err = c.createPlugin(args["pluginDescription"].(string))
+	pluginDescription, ok := args["pluginDescription"].(string)
+	if !ok {
+		return "", fmt.Errorf("pluginDescription not found or not a string")
+	}
 
+	err = c.createPlugin(pluginDescription)
 	if err != nil {
-		return fmt.Sprintf("Error creating plugin: %v", err), nil
+		return "", fmt.Errorf("error creating plugin: %v", err)
 	}
 
-	return "Plugin has succesfully been created, Clara will need to be restarted to load the plugin", nil
-
+	return "Plugin has successfully been created. Clara will need to be restarted to load the plugin.", nil
 }
 
 func (c CreatePlugin) createPlugin(pluginDescription string) error {
 
-	conversation = append(conversation, openai.ChatCompletionMessage{
-		Role:    openai.ChatMessageRoleSystem,
-		Content: createPluginPrompt,
-		Name:    "",
-	})
+	c.conversation = []openai.ChatCompletionMessage{
+		{
+			Role:    openai.ChatMessageRoleSystem,
+			Content: createPluginPrompt,
+		},
+		{
+			Role:    openai.ChatMessageRoleUser,
+			Content: pluginDescription,
+		},
+	}
 
-	conversation = append(conversation, openai.ChatCompletionMessage{
-		Role:    openai.ChatMessageRoleUser,
-		Content: pluginDescription,
-		Name:    "",
-	})
-
-	response, err := c.sendRequestToOpenAI(conversation)
+	response, err := c.sendRequestToOpenAI(c.conversation)
 
 	if err != nil {
 		return err
 	}
 
-	conversation = append(conversation, openai.ChatCompletionMessage{
+	c.conversation = append(c.conversation, openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleAssistant,
 		Content: response.Choices[0].Message.Content,
 		Name:    "",
@@ -122,7 +123,7 @@ func (c CreatePlugin) writeCodetoFile(code string) error {
 	fmt.Println("Writing code to file...")
 
 	randomName := generateRandomString(8) // generating 8 characters long random string
-	pluginSourcePath := c.cfg.PluginsPath() + "/source/" + randomName + "/plugin.go"
+	pluginSourcePath := filepath.Join(c.cfg.PluginsPath(), "source", randomName, "plugin.go")
 
 	// Ensure the directory exists or create it
 	dir := filepath.Dir(pluginSourcePath)
@@ -151,7 +152,7 @@ func (c CreatePlugin) writeCodetoFile(code string) error {
 }
 
 func (c CreatePlugin) compilePlugin(pluginSourcePath string, id string) error {
-	outputPath := c.cfg.PluginsPath() + "/compiled/" + id + ".so"
+	outputPath := filepath.Join(c.cfg.PluginsPath(), "compiled", id+".so")
 
 	// Execute the go build command
 	cmd := exec.Command("go", "build", "-buildmode=plugin", "-o", outputPath, pluginSourcePath)
@@ -197,13 +198,13 @@ func (c CreatePlugin) refineWithChatGPT(pluginSourcePath string, compileError er
 	codeContent := string(codeBytes)
 
 	prompt := fmt.Sprintf("The following Go code has a compilation error:\n\n\n %s \n\n\n Error: %s\n\nPlease provide a fixed version of the code. Do not provide any explination to your fixes, or anything outside of valid go code, as your response will be saved to a file and compiled by Go", codeContent, compileError)
-	conversation = append(conversation, openai.ChatCompletionMessage{
+	c.conversation = append(c.conversation, openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleUser,
 		Content: prompt,
 		Name:    "",
 	})
 
-	response, err := c.sendRequestToOpenAI(conversation)
+	response, err := c.sendRequestToOpenAI(c.conversation)
 	if err != nil {
 		return "", err
 	}
