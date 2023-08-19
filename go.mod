@@ -1,4 +1,4 @@
-module github.com/jjkirkpatrick/gpt-assistant
+module github.com/jjkirkpatrick/clara
 
 go 1.19
 

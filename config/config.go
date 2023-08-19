@@ -21,7 +21,7 @@ type MalvusCfg struct {
 func New() Cfg {
 
 	malvusCfg := MalvusCfg{
-		apiEndpoint:    "localhost:19530",
+		apiEndpoint:    "localhost:19530", //"https://in03-4082eb33e7b209a.api.gcp-us-west1.zillizcloud.com/v1/",
 		collectionName: "CGPTMemory",
 	}
 

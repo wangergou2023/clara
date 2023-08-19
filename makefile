@@ -6,6 +6,13 @@ PLUGIN_DIRS = $(wildcard $(PLUGIN_SRC_DIR)/*)
 # Convert the directory names into expected .so names in ./plugins/compiled
 PLUGIN_OUT = $(patsubst $(PLUGIN_SRC_DIR)/%, $(PLUGIN_DST_DIR)/%.so, $(PLUGIN_DIRS))
 
+buildAssistant:
+	# build the plugins and the assistant
+	@echo "Building plugins..."
+	@make -s rebuild
+	@echo "Building assistant..."
+	@go build 
+
 rebuild: clean all
 
 all:  $(PLUGIN_OUT)
@@ -17,4 +24,6 @@ $(PLUGIN_DST_DIR)/%.so: $(PLUGIN_SRC_DIR)/%
 
 clean:
 	rm -f $(PLUGIN_DST_DIR)/*.so
+
+
 

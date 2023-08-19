@@ -6,7 +6,11 @@ import (
 	"github.com/manifoldco/promptui"
 )
 
-func GetUserMessage() string {
+func GetUserMessage(optionalMessage string) string {
+	if optionalMessage == "" {
+		optionalMessage = "Enter message"
+	}
+
 	validate := func(input string) error {
 		// check string is not empty
 		if len(input) == 0 {
@@ -16,7 +20,7 @@ func GetUserMessage() string {
 	}
 
 	prompt := promptui.Prompt{
-		Label:    "Enter a message",
+		Label:    optionalMessage,
 		Validate: validate,
 	}
 

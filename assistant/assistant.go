@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jjkirkpatrick/gpt-assistant/config"
-	"github.com/jjkirkpatrick/gpt-assistant/plugins"
+	"github.com/jjkirkpatrick/clara/config"
+	"github.com/jjkirkpatrick/clara/plugins"
 	"github.com/logrusorgru/aurora"
 	openai "github.com/sashabaranov/go-openai"
 )
@@ -16,12 +16,13 @@ type assistant struct {
 	functionDefinitions []openai.FunctionDefinition
 }
 
-var systemPrompt = `You are an AI assistant and you should help the user with what they ask.
-	You have access to multiple plugins that can be used to help the user.
+var systemPrompt = `
+You are a versatile AI assistant here to assist users with their requests.
+Leverage the suite of available plugins to provide the best solutions. You can:
+- Use plugins individually for straightforward tasks.
+- Chain multiple plugins for complex tasks.
 
-	You can link the plugins together to create more complex responses, or you can use them individually.
-
-	for example, if a user says "Tomrrow i need to do x" You might use the date-time plugin to get tomorrow date and then use the memory plugin to store the task.
+Example: If told "Tomorrow, I need to do x", combine the date-time plugin for the date and the memory plugin to save the task.
 `
 
 var conversation []openai.ChatCompletionMessage
@@ -39,15 +40,6 @@ func (assistant assistant) restartConversation() {
 	// append the system prompt to the conversation
 	appendMessage(openai.ChatMessageRoleSystem, systemPrompt, "")
 
-	response, err := assistant.sendMessage()
-
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	// append the assistant message to the conversation
-	appendMessage(openai.ChatMessageRoleAssistant, response, "")
 	// print the conversation
 	assistant.writeConversationToScreen()
 

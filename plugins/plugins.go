@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"plugin"
 
-	"github.com/jjkirkpatrick/gpt-assistant/config"
+	"github.com/jjkirkpatrick/clara/config"
 	"github.com/sashabaranov/go-openai"
 )
 

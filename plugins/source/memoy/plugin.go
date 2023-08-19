@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/jjkirkpatrick/gpt-assistant/config"
-	"github.com/jjkirkpatrick/gpt-assistant/plugins"
+	"github.com/jjkirkpatrick/clara/config"
+	"github.com/jjkirkpatrick/clara/plugins"
 	milvus "github.com/milvus-io/milvus-sdk-go/v2/client"
 	"github.com/milvus-io/milvus-sdk-go/v2/entity"
 	"github.com/sashabaranov/go-openai"

@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/jjkirkpatrick/gpt-assistant/config"
-	"github.com/jjkirkpatrick/gpt-assistant/plugins"
+	"github.com/jjkirkpatrick/clara/config"
+	"github.com/jjkirkpatrick/clara/plugins"
 	"github.com/sashabaranov/go-openai"
 	"github.com/sashabaranov/go-openai/jsonschema"
 )
