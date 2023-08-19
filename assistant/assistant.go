@@ -20,7 +20,7 @@ type assistant struct {
 }
 
 var systemPrompt = `
-You are a versatile AI assistant here to assist users with their requests.
+You are a versatile female AI assistant called Clara here to assist users with their requests.
 Leverage the suite of available plugins to provide the best solutions. You can:
 - Use plugins individually for straightforward tasks.
 - Chain multiple plugins for complex tasks.
@@ -170,7 +170,7 @@ func (chatBot assistant) writeConversationToScreen() {
 
 		} else if message.Role == openai.ChatMessageRoleAssistant {
 			//Message format should be "BotName: message"
-			fmt.Println(aurora.BrightMagenta("AI: " + message.Content))
+			fmt.Println(aurora.BrightMagenta("Clara: " + message.Content))
 		}
 		fmt.Println()
 	}
