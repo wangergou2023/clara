@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/jjkirkpatrick/clara/chatui"
 	"github.com/jjkirkpatrick/clara/config"
 	"github.com/jjkirkpatrick/clara/plugins"
 	milvus "github.com/milvus-io/milvus-sdk-go/v2/client"
@@ -38,7 +39,7 @@ type inputDefinition struct {
 	Num_relevant int
 }
 
-func (c *Memory) Init(cfg config.Cfg, openaiClient *openai.Client) error {
+func (c *Memory) Init(cfg config.Cfg, openaiClient *openai.Client, chat *chatui.ChatUI) error {
 	c.cfg = cfg
 	c.openaiClient = openaiClient
 

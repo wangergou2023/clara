@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 
+	"github.com/jjkirkpatrick/clara/chatui"
 	"github.com/jjkirkpatrick/clara/config"
 	"github.com/jjkirkpatrick/clara/plugins"
 	"github.com/sashabaranov/go-openai"
@@ -14,7 +15,7 @@ var Plugin plugins.Plugin = RandomQuote{}
 
 type RandomQuote struct{}
 
-func (c RandomQuote) Init(cfg config.Cfg, openaiClient *openai.Client) error {
+func (c RandomQuote) Init(cfg config.Cfg, openaiClient *openai.Client, chat *chatui.ChatUI) error {
 	return nil
 }
 

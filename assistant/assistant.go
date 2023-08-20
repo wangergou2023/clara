@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/inancgumus/screen"
+	"github.com/jjkirkpatrick/clara/chatui"
 	"github.com/jjkirkpatrick/clara/config"
 	"github.com/jjkirkpatrick/clara/plugins"
 	"github.com/logrusorgru/aurora"
@@ -18,6 +19,7 @@ type assistant struct {
 	cfg                 config.Cfg
 	Client              *openai.Client
 	functionDefinitions []openai.FunctionDefinition
+	chat                *chatui.ChatUI
 }
 
 var systemPrompt = `
@@ -50,7 +52,7 @@ func (assistant assistant) restartConversation() {
 	appendMessage(openai.ChatMessageRoleSystem, systemPrompt, "")
 
 	// print the conversation
-	assistant.writeConversationToScreen()
+	//assistant.writeConversationToScreen()
 
 }
 
@@ -59,6 +61,7 @@ func resetConversation() {
 }
 
 func (assistant assistant) Message(message string) (string, error) {
+	assistant.chat.DisableInput()
 	//check to see if the message is a command
 	//if it is, handle the command and return
 	if assistant.paraseCommandsFromInput(message) {
@@ -77,7 +80,9 @@ func (assistant assistant) Message(message string) (string, error) {
 	// append the assistant message to the conversation
 	appendMessage(openai.ChatMessageRoleAssistant, response, "")
 	// print the conversation
-	assistant.writeConversationToScreen()
+	assistant.chat.AddMessage("Clara", response)
+
+	assistant.chat.EnableInput()
 
 	return response, nil
 }
@@ -150,8 +155,8 @@ func (assistant assistant) sendRequestToOpenAI() (*openai.ChatCompletionResponse
 	return &resp, err
 }
 
-func Start(cfg config.Cfg, openaiClient *openai.Client) assistant {
-	if err := plugins.LoadPlugins(cfg, openaiClient); err != nil {
+func Start(cfg config.Cfg, openaiClient *openai.Client, chat *chatui.ChatUI) assistant {
+	if err := plugins.LoadPlugins(cfg, openaiClient, chat); err != nil {
 		log.Fatalf("Failed to load plugins: %v", err)
 	}
 
@@ -159,9 +164,10 @@ func Start(cfg config.Cfg, openaiClient *openai.Client) assistant {
 		cfg:                 cfg,
 		Client:              openaiClient,
 		functionDefinitions: plugins.GenerateOpenAIFunctionsDefinition(),
+		chat:                chat,
 	}
 
-	assistant.restartConversation()
+	assistant.chat.ClearHistory()
 
 	return assistant
 

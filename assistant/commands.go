@@ -33,6 +33,9 @@ func (assistant assistant) handleCommand(command string) {
 		screen.MoveTopLeft()
 		fmt.Println("Conversation restarted")
 	case "/exit":
+		screen.Clear()
+		screen.MoveTopLeft()
+		fmt.Println("Exiting...")
 		os.Exit(0)
 	}
 }

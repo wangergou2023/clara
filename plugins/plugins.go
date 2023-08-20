@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"plugin"
 
+	"github.com/jjkirkpatrick/clara/chatui"
 	"github.com/jjkirkpatrick/clara/config"
 	"github.com/sashabaranov/go-openai"
 )
@@ -14,7 +15,7 @@ import (
 var loadedPlugins = make(map[string]Plugin)
 
 type Plugin interface {
-	Init(cfg config.Cfg, openaiClient *openai.Client) error
+	Init(cfg config.Cfg, openaiClient *openai.Client, chat *chatui.ChatUI) error
 	ID() string
 	Description() string
 	FunctionDefinition() openai.FunctionDefinition
@@ -26,7 +27,7 @@ type PluginResponse struct {
 	Result string `json:"result,omitempty"` // Contains result if successful.
 }
 
-func LoadPlugins(cfg config.Cfg, openaiClient *openai.Client) error {
+func LoadPlugins(cfg config.Cfg, openaiClient *openai.Client, chat *chatui.ChatUI) error {
 	loadedPlugins = make(map[string]Plugin)
 
 	files, err := os.ReadDir(cfg.PluginsPath() + "/compiled")
@@ -37,7 +38,7 @@ func LoadPlugins(cfg config.Cfg, openaiClient *openai.Client) error {
 	for _, file := range files {
 
 		if filepath.Ext(file.Name()) == ".so" {
-			err := loadSinglePlugin(cfg.PluginsPath()+"/compiled/"+file.Name(), cfg, openaiClient)
+			err := loadSinglePlugin(cfg.PluginsPath()+"/compiled/"+file.Name(), cfg, openaiClient, chat)
 			if err != nil {
 				return err
 			}
@@ -46,7 +47,7 @@ func LoadPlugins(cfg config.Cfg, openaiClient *openai.Client) error {
 	return nil
 }
 
-func loadSinglePlugin(path string, cfg config.Cfg, openaiClient *openai.Client) error {
+func loadSinglePlugin(path string, cfg config.Cfg, openaiClient *openai.Client, chat *chatui.ChatUI) error {
 
 	plugin, err := plugin.Open(path)
 	if err != nil {
@@ -62,7 +63,7 @@ func loadSinglePlugin(path string, cfg config.Cfg, openaiClient *openai.Client) 
 	if !ok {
 		return fmt.Errorf("unexpected type from module symbol: %s", path)
 	}
-	if err := (*p).Init(cfg, openaiClient); err != nil {
+	if err := (*p).Init(cfg, openaiClient, chat); err != nil {
 		return fmt.Errorf("error initializing plugin %s: %v", (*p).ID(), err)
 	}
 	loadedPlugins[(*p).ID()] = *p
