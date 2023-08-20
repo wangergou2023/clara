@@ -5,9 +5,7 @@ import (
 
 	"github.com/jjkirkpatrick/clara/assistant"
 	"github.com/jjkirkpatrick/clara/config"
-	"github.com/jjkirkpatrick/clara/plugins"
 	openai "github.com/sashabaranov/go-openai"
-	log "github.com/sirupsen/logrus"
 )
 
 var cfg = config.New()
@@ -27,13 +25,13 @@ func main() {
 
 	openaiClient = openai.NewClient(cfg.OpenAiAPIKey())
 
-	if err := plugins.LoadPlugins(cfg, openaiClient); err != nil {
-		log.Fatalf("Failed to load plugins: %v", err)
-	}
+	startAssistant()
 
-	functionDefinitions := plugins.GenerateOpenAIFunctionsDefinition()
+}
 
-	clara := assistant.Start(cfg, openaiClient, functionDefinitions)
+func startAssistant() {
+
+	clara := assistant.Start(cfg, openaiClient)
 
 	for {
 

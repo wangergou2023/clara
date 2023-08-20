@@ -3,6 +3,7 @@ package assistant
 import (
 	"context"
 	"fmt"
+	"log"
 	"regexp"
 	"strconv"
 
@@ -29,6 +30,7 @@ Example: If told "Tomorrow, I need to do x", combine the date-time plugin for th
 
 You have the ability to save and recall information from memory. You can via one of your functions. You should save any infomation that you think you will need to recall later. such as a user's name or a date. When saving a memory you should also try to provide as much context as possible. For example, if you are saving a user's name, you should also save the context in which you learned the name. This will help you recall the memory later.
 
+You have the ability to create new functions via the create-plugin plugin. when doing this you must provide as much information as possible about the function. This will help you to use the function later.
 
 `
 
@@ -143,15 +145,20 @@ func (assistant assistant) sendRequestToOpenAI() (*openai.ChatCompletionResponse
 
 	if err != nil {
 		assistant.openaiError(err)
+		fmt.Println("Error: ", err)
 	}
 	return &resp, err
 }
 
-func Start(cfg config.Cfg, openaiClient *openai.Client, functionDefinitions []openai.FunctionDefinition) assistant {
+func Start(cfg config.Cfg, openaiClient *openai.Client) assistant {
+	if err := plugins.LoadPlugins(cfg, openaiClient); err != nil {
+		log.Fatalf("Failed to load plugins: %v", err)
+	}
+
 	assistant := assistant{
 		cfg:                 cfg,
 		Client:              openaiClient,
-		functionDefinitions: functionDefinitions,
+		functionDefinitions: plugins.GenerateOpenAIFunctionsDefinition(),
 	}
 
 	assistant.restartConversation()
