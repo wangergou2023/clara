@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/jjkirkpatrick/clara/chatui"
 	"github.com/jjkirkpatrick/clara/config"
 	"github.com/jjkirkpatrick/clara/plugins"
 	"github.com/sashabaranov/go-openai"
@@ -24,12 +25,14 @@ const MaxRetries = 3
 type CreatePlugin struct {
 	cfg          config.Cfg
 	openaiClient *openai.Client
+	chat         *chatui.ChatUI
 	conversation []openai.ChatCompletionMessage
 }
 
-func (c *CreatePlugin) Init(cfg config.Cfg, openaiClient *openai.Client) error {
+func (c *CreatePlugin) Init(cfg config.Cfg, openaiClient *openai.Client, chat *chatui.ChatUI) error {
 	c.cfg = cfg
 	c.openaiClient = openaiClient
+	c.chat = chat
 	return nil
 }
 
@@ -122,7 +125,8 @@ func (c CreatePlugin) generatePluginCode(pluginDescription string) (string, erro
 		},
 	}
 
-	fmt.Println("Generating plugin code...")
+	c.chat.AddMessage("SYSTEM", "Generating plugin code...")
+
 	response, err := c.sendRequestToOpenAI(c.conversation)
 
 	if err != nil {
@@ -143,7 +147,7 @@ func (c CreatePlugin) generatePluginCode(pluginDescription string) (string, erro
 }
 
 func (c CreatePlugin) writeCodeToFile(code string, name string) (string, error) {
-	fmt.Println("Writing code to file...")
+	c.chat.AddMessage("SYSTEM", "Writing code to file...")
 
 	pluginSourcePath := filepath.Join(c.cfg.PluginsPath(), "source", name, "plugin.go")
 
@@ -180,7 +184,7 @@ func (c CreatePlugin) compilePlugin(pluginSourcePath string, name string) error 
 }
 
 func (c CreatePlugin) refinePluginCode(pluginSourcePath string, compileError error) (string, error) {
-	fmt.Println("Refining code with ChatGPT due to compilation error:", compileError.Error())
+	c.chat.AddMessage("SYSTEM", "Refining code with ChatGPT due to compilation error: "+compileError.Error())
 
 	// Read the contents of the file to get the actual code
 	codeBytes, err := os.ReadFile(pluginSourcePath)
@@ -215,7 +219,7 @@ func (c CreatePlugin) sendRequestToOpenAI(conversation []openai.ChatCompletionMe
 	)
 
 	if err != nil {
-		fmt.Println(err)
+		c.chat.AddMessage("SYSTEM", "Error: "+err.Error())
 	}
 	return &resp, err
 }
@@ -270,7 +274,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
+	"github.com/jjkirkpatrick/clara/chatui"
 	"github.com/jjkirkpatrick/clara/config"
 	"github.com/jjkirkpatrick/clara/plugins"
 	"github.com/sashabaranov/go-openai"
@@ -281,7 +285,10 @@ var Plugin plugins.Plugin = AddNumbers{}
 
 type AddNumbers struct{}
 
-func (c AddNumbers) Init(cfg config.Cfg, openaiClient *openai.Client) error {
+func (c AddNumbers) Init(cfg config.Cfg, openaiClient *openai.Client, chat *chatui.ChatUI) error {
+	c.cfg = cfg
+	c.openaiClient = openaiClient
+	c.chat = chat
 	return nil
 }
 
@@ -320,6 +327,8 @@ func (c AddNumbers) Execute(jsonInput string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	c.chat.AddMessage("SYSTEM", "Executing AddNumbers plugin...")
 
 	num1, ok := args["num1"].(float64)
 	if !ok {
