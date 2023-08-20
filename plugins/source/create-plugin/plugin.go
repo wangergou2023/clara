@@ -59,7 +59,7 @@ func (c CreatePlugin) FunctionDefinition() openai.FunctionDefinition {
 }
 
 func (c CreatePlugin) Execute(jsonInput string) (string, error) {
-	var args map[string]interface{} // Fixing the typo here
+	var args map[string]interface{}
 	err := json.Unmarshal([]byte(jsonInput), &args)
 	if err != nil {
 		return "", fmt.Errorf("error unmarshalling jsonInput: %v", err)
@@ -70,16 +70,47 @@ func (c CreatePlugin) Execute(jsonInput string) (string, error) {
 		return "", fmt.Errorf("pluginDescription not found or not a string")
 	}
 
-	err = c.createPlugin(pluginDescription)
+	code, err := c.generatePluginCode(pluginDescription)
 	if err != nil {
-		return "", fmt.Errorf("error creating plugin: %v", err)
+		return "", err
+	}
+
+	randomName, err := generateRandomString(8) // generating 8 characters long random string
+	if err != nil {
+		return "", err
+	}
+
+	filePath, err := c.writeCodeToFile(code, randomName)
+	if err != nil {
+		return "", err
+	}
+
+	for i := 0; i < MaxRetries; i++ {
+		err = c.compilePlugin(filePath, randomName)
+		if err == nil {
+			break // compiled successfully
+		}
+
+		refinedCode, refineErr := c.refinePluginCode(filePath, err)
+		if refineErr != nil {
+			return "", refineErr
+		}
+
+		// Update the plugin source with the refined code
+		filePath, err = c.writeCodeToFile(refinedCode, randomName)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	if err != nil {
+		return "", fmt.Errorf("failed to compile the plugin after maximum retries")
 	}
 
 	return "Plugin has successfully been created. Clara will need to be restarted to load the plugin.", nil
 }
 
-func (c CreatePlugin) createPlugin(pluginDescription string) error {
-
+func (c CreatePlugin) generatePluginCode(pluginDescription string) (string, error) {
 	c.conversation = []openai.ChatCompletionMessage{
 		{
 			Role:    openai.ChatMessageRoleSystem,
@@ -91,10 +122,11 @@ func (c CreatePlugin) createPlugin(pluginDescription string) error {
 		},
 	}
 
+	fmt.Println("Generating plugin code...")
 	response, err := c.sendRequestToOpenAI(c.conversation)
 
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	c.conversation = append(c.conversation, openai.ChatCompletionMessage{
@@ -103,34 +135,24 @@ func (c CreatePlugin) createPlugin(pluginDescription string) error {
 		Name:    "",
 	})
 
-	//check to make sure openAI finished successfully
-
 	if response.Choices[0].FinishReason == openai.FinishReasonStop {
-		fmt.Println("Generating plugin code...")
-		err = c.writeCodetoFile(response.Choices[0].Message.Content)
-		if err != nil {
-			return err
-		}
+		return response.Choices[0].Message.Content, nil
 	} else {
-		return fmt.Errorf("OpenAI did not finish successfully")
+		return "", fmt.Errorf("failed to generate plugin code")
 	}
-
-	return nil
-
 }
 
-func (c CreatePlugin) writeCodetoFile(code string) error {
+func (c CreatePlugin) writeCodeToFile(code string, name string) (string, error) {
 	fmt.Println("Writing code to file...")
 
-	randomName := generateRandomString(8) // generating 8 characters long random string
-	pluginSourcePath := filepath.Join(c.cfg.PluginsPath(), "source", randomName, "plugin.go")
+	pluginSourcePath := filepath.Join(c.cfg.PluginsPath(), "source", name, "plugin.go")
 
 	// Ensure the directory exists or create it
 	dir := filepath.Dir(pluginSourcePath)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		err := os.MkdirAll(dir, 0755) // 0755 is the permission mode
 		if err != nil {
-			return fmt.Errorf("failed to create directory: %v", err)
+			return "", fmt.Errorf("failed to create directory: %v", err)
 		}
 	}
 
@@ -139,20 +161,14 @@ func (c CreatePlugin) writeCodetoFile(code string) error {
 	// Write the code to the file
 	err := os.WriteFile(pluginSourcePath, []byte(code), 0644) // 0644 is the permission mode for files
 	if err != nil {
-		return fmt.Errorf("failed to write code to file: %v", err)
+		return "", fmt.Errorf("failed to write code to file: %v", err)
 	}
 
-	// After successfully writing the file, compile the plugin
-	err = c.compileAndRefinePlugin(pluginSourcePath, randomName)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return pluginSourcePath, nil
 }
 
-func (c CreatePlugin) compilePlugin(pluginSourcePath string, id string) error {
-	outputPath := filepath.Join(c.cfg.PluginsPath(), "compiled", id+".so")
+func (c CreatePlugin) compilePlugin(pluginSourcePath string, name string) error {
+	outputPath := filepath.Join(c.cfg.PluginsPath(), "compiled", name+".so")
 
 	// Execute the go build command
 	cmd := exec.Command("go", "build", "-buildmode=plugin", "-o", outputPath, pluginSourcePath)
@@ -163,31 +179,7 @@ func (c CreatePlugin) compilePlugin(pluginSourcePath string, id string) error {
 	return nil
 }
 
-func (c CreatePlugin) compileAndRefinePlugin(pluginSourcePath, id string) error {
-	fmt.Println("Compiling plugin...")
-	for i := 0; i < MaxRetries; i++ {
-		err := c.compilePlugin(pluginSourcePath, id)
-		if err == nil {
-			return nil // compiled successfully
-		}
-
-		refinedCode, refineErr := c.refineWithChatGPT(pluginSourcePath, err)
-		if refineErr != nil {
-			return fmt.Errorf("failed to refine the code: %v", refineErr)
-		}
-
-		//remove backticks from refined code
-		refinedCode = removeMarkdownBackticks(refinedCode)
-		// Update the plugin source with the refined code
-		err = os.WriteFile(pluginSourcePath, []byte(refinedCode), 0644)
-		if err != nil {
-			return fmt.Errorf("failed to write refined code to file: %v", err)
-		}
-	}
-	return fmt.Errorf("failed to compile the plugin after maximum retries")
-}
-
-func (c CreatePlugin) refineWithChatGPT(pluginSourcePath string, compileError error) (string, error) {
+func (c CreatePlugin) refinePluginCode(pluginSourcePath string, compileError error) (string, error) {
 	fmt.Println("Refining code with ChatGPT due to compilation error:", compileError.Error())
 
 	// Read the contents of the file to get the actual code
@@ -250,13 +242,13 @@ func removeMarkdownBackticks(code string) string {
 	return strings.TrimSpace(code)
 }
 
-func generateRandomString(length int) string {
+func generateRandomString(length int) (string, error) {
 	randBytes := make([]byte, length/2) // each byte will be two characters in hex
 	_, err := rand.Read(randBytes)
 	if err != nil {
-		panic(err) // Handle error as you see fit
+		return "", err
 	}
-	return hex.EncodeToString(randBytes)
+	return hex.EncodeToString(randBytes), nil
 }
 
 var createPluginPrompt = `
