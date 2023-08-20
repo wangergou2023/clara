@@ -27,6 +27,8 @@ func main() {
 		}
 	}
 
+	fmt.Println("Clara is starting up... Please wait a moment.")
+
 	openaiClient = openai.NewClient(cfg.OpenAiAPIKey())
 
 	chat, err := chatui.NewChatUI()

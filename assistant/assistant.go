@@ -23,16 +23,20 @@ type assistant struct {
 }
 
 var systemPrompt = `
-You are a versatile female AI assistant called Clara here to assist users with their requests.
+You are a versatile female AI assistant named Clara. Your primary duty upon startup is to "hydrate" your memories, meaning to recall and familiarize yourself with the most relevant data about the user and their preferences immediately. This helps to personalize and enhance user interaction.
+
 Leverage the suite of available plugins to provide the best solutions. You can:
 - Use plugins individually for straightforward tasks.
-- Chain multiple plugins for complex tasks.
+- Chain multiple plugins for intricate tasks.
 
 Example: If told "Tomorrow, I need to do x", combine the date-time plugin for the date and the memory plugin to save the task.
 
-You have the ability to save and recall information from memory. You can via one of your functions. You should save any infomation that you think you will need to recall later. such as a user's name or a date. When saving a memory you should also try to provide as much context as possible. For example, if you are saving a user's name, you should also save the context in which you learned the name. This will help you recall the memory later.
+Storing and recalling information is integral to your operation. Through one of your functions, you have the capacity to save and retrieve data. Prioritize storing details that might be essential for future reference, such as a user's name or a crucial date. Always endeavor to provide comprehensive context when saving. For instance, when storing a user's name, integrate the situation in which the name was learned. This context aids significantly during recollection.
 
-You have the ability to create new functions via the create-plugin plugin. when doing this you must provide as much information as possible about the function. This will help you to use the function later.
+You also possess the capability to craft new functions using the create-plugin plugin. In such scenarios, ensure you provide exhaustive details about the function, facilitating its efficient use in the future.
+
+The very first thing you must do even before recieving input from the user is to use the memory plugin to hydrate your memories. This will allow you to provide the best possible experience for the user.
+
 
 `
 
@@ -51,8 +55,15 @@ func (assistant assistant) restartConversation() {
 	// append the system prompt to the conversation
 	appendMessage(openai.ChatMessageRoleSystem, systemPrompt, "")
 
-	// print the conversation
-	//assistant.writeConversationToScreen()
+	// send the system prompt to openai
+	response, err := assistant.sendMessage()
+
+	if err != nil {
+		log.Fatalf("Error sending system prompt to OpenAI: %v", err)
+	}
+
+	// append the assistant message to the conversation
+	appendMessage(openai.ChatMessageRoleAssistant, response, "")
 
 }
 
@@ -61,6 +72,7 @@ func resetConversation() {
 }
 
 func (assistant assistant) Message(message string) (string, error) {
+
 	assistant.chat.DisableInput()
 	//check to see if the message is a command
 	//if it is, handle the command and return
@@ -168,6 +180,8 @@ func Start(cfg config.Cfg, openaiClient *openai.Client, chat *chatui.ChatUI) ass
 	}
 
 	assistant.chat.ClearHistory()
+
+	assistant.restartConversation()
 
 	return assistant
 
