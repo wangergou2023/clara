@@ -27,6 +27,8 @@ type PluginResponse struct {
 }
 
 func LoadPlugins(cfg config.Cfg, openaiClient *openai.Client) error {
+	loadedPlugins = make(map[string]Plugin)
+
 	files, err := os.ReadDir(cfg.PluginsPath() + "/compiled")
 	if err != nil {
 		return err

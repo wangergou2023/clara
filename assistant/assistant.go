@@ -3,6 +3,7 @@ package assistant
 import (
 	"context"
 	"fmt"
+	"log"
 	"regexp"
 	"strconv"
 
@@ -149,11 +150,15 @@ func (assistant assistant) sendRequestToOpenAI() (*openai.ChatCompletionResponse
 	return &resp, err
 }
 
-func Start(cfg config.Cfg, openaiClient *openai.Client, functionDefinitions []openai.FunctionDefinition) assistant {
+func Start(cfg config.Cfg, openaiClient *openai.Client) assistant {
+	if err := plugins.LoadPlugins(cfg, openaiClient); err != nil {
+		log.Fatalf("Failed to load plugins: %v", err)
+	}
+
 	assistant := assistant{
 		cfg:                 cfg,
 		Client:              openaiClient,
-		functionDefinitions: functionDefinitions,
+		functionDefinitions: plugins.GenerateOpenAIFunctionsDefinition(),
 	}
 
 	assistant.restartConversation()
