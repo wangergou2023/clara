@@ -152,7 +152,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.inputDisabled = true
 		m.textarea.Placeholder = "Waiting for Clara..."
 		return m, nil
-
 	case enableInputMsg:
 		m.inputDisabled = false
 		m.textarea.Placeholder = "Send a message..."

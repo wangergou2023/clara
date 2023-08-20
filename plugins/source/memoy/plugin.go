@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/jjkirkpatrick/clara/chatui"
 	"github.com/jjkirkpatrick/clara/config"
@@ -23,20 +24,27 @@ type Memory struct {
 }
 
 type memory struct {
-	ID     int64
-	memory string
+	Memory string
 	Vector []float32
 }
 
 type memoryResult struct {
 	Memory string
+	Type   string
+	Detail string
 	Score  float32
 }
 
+type memoryItem struct {
+	Memory string `json:"memory"`
+	Type   string `json:"type"`
+	Detail string `json:"detail"`
+}
+
 type inputDefinition struct {
-	RequestType  string
-	Memories     []string
-	Num_relevant int
+	RequestType  string       `json:"requestType"`
+	Memories     []memoryItem `json:"memories"`
+	Num_relevant int          `json:"num_relevant"`
 }
 
 func (c *Memory) Init(cfg config.Cfg, openaiClient *openai.Client, chat *chatui.ChatUI) error {
@@ -67,27 +75,42 @@ func (c Memory) Description() string {
 func (c Memory) FunctionDefinition() openai.FunctionDefinition {
 	return openai.FunctionDefinition{
 		Name:        "memory",
-		Description: "store and retrieve memories from long term memory. use requestType set to add memories to the database, use requestType get to retrieve the most relevant memories.",
+		Description: "Store and retrieve memories from long term memory. Use requestType 'set' to add memories to the database, use requestType 'get' to retrieve the most relevant memories. When first starting you should use the 'hydrate' function to recall past memories about the user.'",
 		Parameters: jsonschema.Definition{
 			Type: jsonschema.Object,
 			Properties: map[string]jsonschema.Definition{
 				"requestType": {
 					Type:        jsonschema.String,
-					Description: "the type of request to make either set or get, set will add memories to the database, get will return the most relevant memories",
+					Description: "The type of request to make  'set' , 'get' or 'hydrate'. 'Set' will add memories to the database, 'get' will return the most relevant memories. when getting a memory, you should always include the memory fiel. 'hydrate' will return a prompt with all the memories about the user.",
 				},
 				"memories": {
 					Type: jsonschema.Array,
 					Items: &jsonschema.Definition{
-						Type: jsonschema.String,
+						Type: jsonschema.Object,
+						Properties: map[string]jsonschema.Definition{
+							"memory": {
+								Type:        jsonschema.String,
+								Description: "The individual memory to add. You should provide as much context as possible to go along with the memory.",
+							},
+							"type": {
+								Type:        jsonschema.String,
+								Description: "The type of memory, for example: 'personality', 'food', etc.",
+							},
+							"detail": {
+								Type:        jsonschema.String,
+								Description: "Specific detail about the type, for example: 'likes pizza', 'is flirty', etc.",
+							},
+						},
+						Required: []string{"memory", "type", "detail"},
 					},
-					Description: "the memories to add or get, example: ['I like to eat pizza', 'I have a cat'] for each memory you want to set you should provde as much context as possible to go along with the memory.",
+					Description: "The array of memories to add or get. Each memory contains its individual content, type, and detail. This is required for both 'set' and 'get' requests.",
 				},
 				"num_relevant": {
 					Type:        jsonschema.Integer,
-					Description: "the number of relevant memories to return, example: 5",
+					Description: "The number of relevant memories to return, for example: 5.",
 				},
 			},
-			Required: []string{"requestType", "memories"}, // ensure "memories" is required
+			Required: []string{"requestType"},
 		},
 	}
 }
@@ -105,7 +128,7 @@ func (c Memory) Execute(jsonInput string) (string, error) {
 	}
 
 	// Check if memories slice is empty
-	if len(args.Memories) == 0 {
+	if args.RequestType != "hydrate" && len(args.Memories) == 0 {
 		return fmt.Sprintf(`%v`, "memories are required but was empty"), nil
 	}
 
@@ -113,7 +136,7 @@ func (c Memory) Execute(jsonInput string) (string, error) {
 	case "set":
 		// Iterate over all memories and set them
 		for _, memory := range args.Memories {
-			ok, err := c.setMemory(memory)
+			ok, err := c.setMemory(memory.Memory, memory.Type, memory.Detail)
 			if err != nil {
 				return fmt.Sprintf(`%v`, err), err
 			}
@@ -130,12 +153,15 @@ func (c Memory) Execute(jsonInput string) (string, error) {
 			return fmt.Sprintf(`%v`, err), err
 		}
 		return fmt.Sprintf(`%v`, memoryResponse), nil
-
+	case "hydrate":
+		prompt, err := c.HydrateUserMemories()
+		if err != nil {
+			return fmt.Sprintf(`%v`, err), err
+		}
+		return prompt, nil
 	default:
 		return "unknown request type check out Example for how to use the memory plug", nil
 	}
-
-	return "", nil
 }
 
 func (c Memory) getEmbeddingsFromOpenAI(data string) openai.Embedding {
@@ -150,12 +176,14 @@ func (c Memory) getEmbeddingsFromOpenAI(data string) openai.Embedding {
 	return embeddings.Data[0]
 }
 
-func (c Memory) setMemory(newMemory string) (bool, error) {
-	embeddings := c.getEmbeddingsFromOpenAI(newMemory)
+func (c Memory) setMemory(newMemory, memoryType, memoryDetail string) (bool, error) {
+	// Step 1: Combine the three fields into a single string
+	combinedMemory := memoryType + "|" + memoryDetail + "|" + newMemory
+
+	embeddings := c.getEmbeddingsFromOpenAI(combinedMemory)
 
 	longTermMemory := memory{
-		ID:     1,
-		memory: newMemory,
+		Memory: combinedMemory, // Use combinedMemory here
 		Vector: embeddings.Embedding,
 	}
 
@@ -167,7 +195,7 @@ func (c Memory) setMemory(newMemory string) (bool, error) {
 	vectors := make([][]float32, 0, len(memories))
 
 	for _, memory := range memories {
-		memoryData = append(memoryData, memory.memory)
+		memoryData = append(memoryData, memory.Memory)
 		vectors = append(vectors, memory.Vector)
 	}
 
@@ -181,11 +209,11 @@ func (c Memory) setMemory(newMemory string) (bool, error) {
 	}
 
 	return true, nil
-
 }
 
-func (c Memory) getMemory(memoryToGet string, num_relevant int) (string, error) {
-	embeddings := c.getEmbeddingsFromOpenAI(memoryToGet)
+func (c Memory) getMemory(memory memoryItem, num_relevant int) ([]memoryResult, error) {
+	combinedMemory := memory.Type + "|" + memory.Detail + "|" + memory.Memory + ","
+	embeddings := c.getEmbeddingsFromOpenAI(combinedMemory)
 
 	ctx := context.Background()
 	partitions := []string{}
@@ -203,30 +231,33 @@ func (c Memory) getMemory(memoryToGet string, num_relevant int) (string, error) 
 	searchResult, err := c.milvusClient.Search(ctx, c.cfg.MalvusCollectionName(), partitions, expr, outputFields, vectors, vectorField, metricType, topK, searchParam, options...)
 
 	if err != nil {
-		return fmt.Sprint("unable to search milvus"), err
+		return nil, err
 	}
 
-	memoryResults := make([]memoryResult, 0, len(searchResult)*topK)
+	memoryFields := c.getStringSliceFromColumn(searchResult[0].Fields.GetColumn("memory"))
 
-	for _, sr := range searchResult {
-		memoryFields := c.getStringSliceFromColumn(sr.Fields.GetColumn("memory"))
+	var allMemories []string
+	if len(memoryFields) == 1 {
+		allMemories = strings.Split(memoryFields[0], ",")
+	} else {
+		allMemories = memoryFields
+	}
 
-		for i := 0; i < len(sr.Scores); i++ {
-			memoryResults = append(memoryResults, memoryResult{
-				Memory: memoryFields[i],
-				Score:  sr.Scores[i],
-			})
+	memoryResults := make([]memoryResult, len(allMemories))
+
+	for idx, memory := range allMemories {
+		parts := strings.Split(memory, "|")
+
+		if len(parts) >= 3 {
+			memoryResults[idx] = memoryResult{
+				Type:   strings.TrimSpace(parts[0]),
+				Detail: strings.TrimSpace(parts[1]),
+				Memory: strings.TrimSpace(parts[2]),
+			}
 		}
 	}
 
-	// marshal memoryResults to json
-	jsonMemoryResults, err := json.Marshal(memoryResults)
-	if err != nil {
-		return "", err
-	}
-
-	return string(jsonMemoryResults), nil
-
+	return memoryResults, nil
 }
 
 func (c Memory) getStringSliceFromColumn(column entity.Column) []string {
@@ -253,7 +284,7 @@ func (c Memory) initMilvusSchema() error {
 	if exists, _ := c.milvusClient.HasCollection(context.Background(), c.cfg.MalvusCollectionName()); !exists {
 		schema := &entity.Schema{
 			CollectionName: c.cfg.MalvusCollectionName(),
-			Description:    "Test book search",
+			Description:    "Clara's long term memory",
 			Fields: []*entity.Field{
 				{
 					Name:       "memory_id",
@@ -293,10 +324,10 @@ func (c Memory) initMilvusSchema() error {
 		if err != nil {
 			return err
 		}
+
 	}
 
 	//check to see if the collection is loaded
-
 	loaded, err := c.milvusClient.GetLoadState(context.Background(), c.cfg.MalvusCollectionName(), []string{})
 
 	if err != nil {
@@ -311,4 +342,80 @@ func (c Memory) initMilvusSchema() error {
 	}
 
 	return nil
+}
+
+func (c *Memory) HydrateUserMemories() (string, error) {
+
+	var memories = []memoryItem{
+		{Type: "Basic Personal Information", Detail: "name"},
+		{Type: "Basic Personal Information", Detail: "age"},
+		{Type: "Basic Personal Information", Detail: "gender"},
+		{Type: "Basic Personal Information", Detail: "location"},
+
+		{Type: "Preferences", Detail: "music_preference"},
+		{Type: "Preferences", Detail: "movie_preference"},
+		{Type: "Preferences", Detail: "book_preference"},
+		{Type: "Preferences", Detail: "food_preference"},
+
+		{Type: "Professional and Educational Background", Detail: "profession"},
+		{Type: "Professional and Educational Background", Detail: "education"},
+		{Type: "Professional and Educational Background", Detail: "skills"},
+
+		{Type: "Hobbies and Interests", Detail: "hobbies"},
+		{Type: "Hobbies and Interests", Detail: "sports"},
+		{Type: "Hobbies and Interests", Detail: "travel"},
+		{Type: "Hobbies and Interests", Detail: "games"},
+
+		{Type: "Lifestyle and Habits", Detail: "exercise_habit"},
+		{Type: "Lifestyle and Habits", Detail: "reading_habit"},
+		{Type: "Lifestyle and Habits", Detail: "diet"},
+		{Type: "Lifestyle and Habits", Detail: "pets"},
+
+		{Type: "Tech and Media Consumption", Detail: "favorite_apps"},
+		{Type: "Tech and Media Consumption", Detail: "device_preference"},
+		{Type: "Tech and Media Consumption", Detail: "news_source"},
+
+		{Type: "Social and Personal Relationships", Detail: "family"},
+		{Type: "Social and Personal Relationships", Detail: "friends"},
+		{Type: "Social and Personal Relationships", Detail: "relationship_status"},
+
+		{Type: "Past Interactions", Detail: "past_questions"},
+		{Type: "Past Interactions", Detail: "feedback"},
+		{Type: "Past Interactions", Detail: "topics_of_interest"},
+
+		{Type: "Moods and Feelings", Detail: "current_mood"},
+		{Type: "Moods and Feelings", Detail: "life_events"},
+		{Type: "Moods and Feelings", Detail: "challenges"},
+
+		{Type: "Custom User Data", Detail: "custom_data"},
+	}
+
+	uniqueMemories := make(map[string]bool)
+	var memoryList []string
+
+	prompt := "You are an AI assistant called Clara, you have a long term memory, here are some memories about the user you can use: "
+
+	for _, m := range memories {
+		// Get each memory from the vector database based on user ID and memory type
+		results, err := c.getMemory(m, 5)
+		if err != nil {
+			return "", err
+		}
+
+		for _, res := range results {
+			// Remove the trailing comma from each memory if it exists
+			cleanMemory := strings.TrimSuffix(res.Memory, ",")
+			if _, exists := uniqueMemories[cleanMemory]; !exists {
+				uniqueMemories[cleanMemory] = true
+				memoryList = append(memoryList, cleanMemory)
+			}
+		}
+	}
+
+	// Convert unique memories into a CSV list
+	memoriesCSV := strings.Join(memoryList, ", ")
+
+	prompt += memoriesCSV
+
+	return prompt, nil
 }
