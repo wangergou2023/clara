@@ -122,7 +122,7 @@ func (c CreatePlugin) Execute(jsonInput string) (string, error) {
 	return "Plugin has successfully been created. Clara will need to be restarted to load the plugin.", nil
 }
 
-func (c CreatePlugin) generatePluginCode(pluginDescription string) (string, error) {
+func (c *CreatePlugin) generatePluginCode(pluginDescription string) (string, error) {
 	c.conversation = []openai.ChatCompletionMessage{
 		{
 			Role:    openai.ChatMessageRoleSystem,
@@ -160,7 +160,7 @@ func (c CreatePlugin) generatePluginCode(pluginDescription string) (string, erro
 func (c CreatePlugin) writeCodeToFile(code string, name string) (string, error) {
 	c.chat.AddMessage("SYSTEM", "Writing code to file...")
 
-	pluginSourcePath := filepath.Join(c.cfg.PluginsPath(), "source", name, "plugin.go")
+	pluginSourcePath := filepath.Join(c.cfg.PluginsPath(), "source", "generated", name, "plugin.go")
 
 	// Ensure the directory exists or create it
 	dir := filepath.Dir(pluginSourcePath)
@@ -247,17 +247,11 @@ func removeMarkdownBackticks(code string) string {
 	const startDelimitergo = "```go"
 	const endDelimiter = "```"
 
-	// Remove the start delimiter if it exists.
-	if strings.HasPrefix(code, startDelimiterGo) {
-		code = strings.TrimPrefix(code, startDelimiterGo)
-	} else if strings.HasPrefix(code, startDelimitergo) {
-		code = strings.TrimPrefix(code, startDelimitergo)
-	}
+	code = strings.TrimPrefix(code, startDelimiterGo)
+	code = strings.TrimPrefix(code, startDelimitergo)
 
 	// Remove the end delimiter if it exists.
-	if strings.HasSuffix(code, endDelimiter) {
-		code = strings.TrimSuffix(code, endDelimiter)
-	}
+	code = strings.TrimSuffix(code, endDelimiter)
 
 	// Return the cleaned code.
 	return strings.TrimSpace(code)

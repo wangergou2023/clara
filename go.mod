@@ -3,11 +3,11 @@ module github.com/jjkirkpatrick/clara
 go 1.19
 
 require (
+	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de
 	github.com/charmbracelet/bubbles v0.16.1
 	github.com/charmbracelet/bubbletea v0.24.2
 	github.com/charmbracelet/lipgloss v0.7.1
 	github.com/inancgumus/screen v0.0.0-20190314163918-06e984b86ed3
-	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/manifoldco/promptui v0.9.0
 	github.com/milvus-io/milvus-sdk-go/v2 v2.2.7
 	github.com/mitchellh/go-wordwrap v1.0.1

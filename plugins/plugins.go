@@ -30,6 +30,7 @@ type PluginResponse struct {
 func LoadPlugins(cfg config.Cfg, openaiClient *openai.Client, chat *chatui.ChatUI) error {
 	loadedPlugins = make(map[string]Plugin)
 
+	// Load plugins from compiled folder
 	files, err := os.ReadDir(cfg.PluginsPath() + "/compiled")
 	if err != nil {
 		return err
@@ -44,6 +45,23 @@ func LoadPlugins(cfg config.Cfg, openaiClient *openai.Client, chat *chatui.ChatU
 			}
 		}
 	}
+
+	// Load plugins from generated folder
+	files, err = os.ReadDir(cfg.PluginsPath() + "/generated")
+	if err != nil {
+		return err
+	}
+
+	for _, file := range files {
+		if filepath.Ext(file.Name()) == ".so" {
+			cfg.AppLogger.Info("Loading plugin: ", file.Name())
+			err := loadSinglePlugin(cfg.PluginsPath()+"/generated/"+file.Name(), cfg, openaiClient, chat)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
