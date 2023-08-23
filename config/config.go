@@ -1,5 +1,12 @@
 package config
 
+import (
+	"fmt"
+	"os"
+
+	"github.com/sirupsen/logrus"
+)
+
 type Cfg struct {
 	openAiAPIKey string
 	openAiModel  string
@@ -8,8 +15,11 @@ type Cfg struct {
 	debugMode       bool
 
 	pluginsPath string
+	logName     string
 
 	malvusCfg MalvusCfg
+
+	AppLogger *logrus.Logger
 }
 
 type MalvusCfg struct {
@@ -25,7 +35,7 @@ func New() Cfg {
 		collectionName: "CGPTMemory",
 	}
 
-	return Cfg{
+	cfg := Cfg{
 		openAiAPIKey:    "",
 		openAiModel:     "gpt-4",
 		supervisedModel: false,
@@ -33,6 +43,14 @@ func New() Cfg {
 		pluginsPath:     "./plugins",
 		malvusCfg:       malvusCfg,
 	}
+
+	err := cfg.InitLogger()
+	if err != nil {
+		fmt.Println("Error initializing logger: ", err)
+		os.Exit(1)
+	}
+
+	return cfg
 }
 
 func (c Cfg) OpenAiAPIKey() string {
@@ -106,4 +124,17 @@ func (c Cfg) SetMalvusCollectionName(collectionName string) Cfg {
 	c.malvusCfg.collectionName = collectionName
 	return c
 
+}
+
+func (c *Cfg) InitLogger() error {
+	if c.logName == "" {
+		c.logName = "clara.log"
+	}
+	file, err := os.OpenFile(c.logName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		return fmt.Errorf("failed to open log file %s for output: %s", c.logName, err)
+	}
+	c.AppLogger = logrus.New()
+	c.AppLogger.Out = file
+	return nil
 }

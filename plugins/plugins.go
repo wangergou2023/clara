@@ -36,8 +36,8 @@ func LoadPlugins(cfg config.Cfg, openaiClient *openai.Client, chat *chatui.ChatU
 	}
 
 	for _, file := range files {
-
 		if filepath.Ext(file.Name()) == ".so" {
+			cfg.AppLogger.Info("Loading plugin: ", file.Name())
 			err := loadSinglePlugin(cfg.PluginsPath()+"/compiled/"+file.Name(), cfg, openaiClient, chat)
 			if err != nil {
 				return err
@@ -63,8 +63,9 @@ func loadSinglePlugin(path string, cfg config.Cfg, openaiClient *openai.Client, 
 	if !ok {
 		return fmt.Errorf("unexpected type from module symbol: %s", path)
 	}
-	if err := (*p).Init(cfg, openaiClient, chat); err != nil {
-		return fmt.Errorf("error initializing plugin %s: %v", (*p).ID(), err)
+	err = (*p).Init(cfg, openaiClient, chat)
+	if err != nil {
+		return err
 	}
 	loadedPlugins[(*p).ID()] = *p
 	return nil

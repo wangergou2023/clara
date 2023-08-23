@@ -65,26 +65,31 @@ func (c CreatePlugin) Execute(jsonInput string) (string, error) {
 	var args map[string]interface{}
 	err := json.Unmarshal([]byte(jsonInput), &args)
 	if err != nil {
+		c.cfg.AppLogger.Infof("error unmarshalling jsonInput: %v", err)
 		return "", fmt.Errorf("error unmarshalling jsonInput: %v", err)
 	}
 
 	pluginDescription, ok := args["pluginDescription"].(string)
 	if !ok {
+		c.cfg.AppLogger.Info("pluginDescription not found or not a string")
 		return "", fmt.Errorf("pluginDescription not found or not a string")
 	}
 
 	code, err := c.generatePluginCode(pluginDescription)
 	if err != nil {
+		c.cfg.AppLogger.Infof("error generating plugin code: %v", err)
 		return "", err
 	}
 
 	randomName, err := generateRandomString(8) // generating 8 characters long random string
 	if err != nil {
+		c.cfg.AppLogger.Infof("error generating random string: %v", err)
 		return "", err
 	}
 
 	filePath, err := c.writeCodeToFile(code, randomName)
 	if err != nil {
+		c.cfg.AppLogger.Infof("error writing code to file: %v", err)
 		return "", err
 	}
 
@@ -94,19 +99,23 @@ func (c CreatePlugin) Execute(jsonInput string) (string, error) {
 			break // compiled successfully
 		}
 
+		c.cfg.AppLogger.Infof("error compiling plugin: %v", err)
 		refinedCode, refineErr := c.refinePluginCode(filePath, err)
 		if refineErr != nil {
+			c.cfg.AppLogger.Infof("error refining plugin code: %v", refineErr)
 			return "", refineErr
 		}
 
 		// Update the plugin source with the refined code
 		filePath, err = c.writeCodeToFile(refinedCode, randomName)
 		if err != nil {
+			c.cfg.AppLogger.Infof("error writing refined code to file: %v", err)
 			return "", err
 		}
 	}
 
 	if err != nil {
+		c.cfg.AppLogger.Info("failed to compile the plugin after maximum retries")
 		return "", fmt.Errorf("failed to compile the plugin after maximum retries")
 	}
 
@@ -130,6 +139,7 @@ func (c CreatePlugin) generatePluginCode(pluginDescription string) (string, erro
 	response, err := c.sendRequestToOpenAI(c.conversation)
 
 	if err != nil {
+		c.cfg.AppLogger.Infof("error sending request to OpenAI: %v", err)
 		return "", err
 	}
 
@@ -142,6 +152,7 @@ func (c CreatePlugin) generatePluginCode(pluginDescription string) (string, erro
 	if response.Choices[0].FinishReason == openai.FinishReasonStop {
 		return response.Choices[0].Message.Content, nil
 	} else {
+		c.cfg.AppLogger.Info("failed to generate plugin code")
 		return "", fmt.Errorf("failed to generate plugin code")
 	}
 }
@@ -156,6 +167,7 @@ func (c CreatePlugin) writeCodeToFile(code string, name string) (string, error) 
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		err := os.MkdirAll(dir, 0755) // 0755 is the permission mode
 		if err != nil {
+			c.cfg.AppLogger.Infof("failed to create directory: %v", err)
 			return "", fmt.Errorf("failed to create directory: %v", err)
 		}
 	}
@@ -165,6 +177,7 @@ func (c CreatePlugin) writeCodeToFile(code string, name string) (string, error) 
 	// Write the code to the file
 	err := os.WriteFile(pluginSourcePath, []byte(code), 0644) // 0644 is the permission mode for files
 	if err != nil {
+		c.cfg.AppLogger.Infof("failed to write code to file: %v", err)
 		return "", fmt.Errorf("failed to write code to file: %v", err)
 	}
 
@@ -177,6 +190,7 @@ func (c CreatePlugin) compilePlugin(pluginSourcePath string, name string) error 
 	// Execute the go build command
 	cmd := exec.Command("go", "build", "-buildmode=plugin", "-o", outputPath, pluginSourcePath)
 	if b, err := cmd.CombinedOutput(); err != nil {
+		c.cfg.AppLogger.Infof("error compiling plugin: %s", b)
 		return fmt.Errorf("error compiling plugin: %s", b)
 	}
 
@@ -189,6 +203,7 @@ func (c CreatePlugin) refinePluginCode(pluginSourcePath string, compileError err
 	// Read the contents of the file to get the actual code
 	codeBytes, err := os.ReadFile(pluginSourcePath)
 	if err != nil {
+		c.cfg.AppLogger.Infof("failed to read the code from file: %v", err)
 		return "", fmt.Errorf("failed to read the code from file: %v", err)
 	}
 	codeContent := string(codeBytes)
@@ -202,6 +217,7 @@ func (c CreatePlugin) refinePluginCode(pluginSourcePath string, compileError err
 
 	response, err := c.sendRequestToOpenAI(c.conversation)
 	if err != nil {
+		c.cfg.AppLogger.Infof("error sending request to OpenAI: %v", err)
 		return "", err
 	}
 
@@ -219,6 +235,7 @@ func (c CreatePlugin) sendRequestToOpenAI(conversation []openai.ChatCompletionMe
 	)
 
 	if err != nil {
+		c.cfg.AppLogger.Info("Error: " + err.Error())
 		c.chat.AddMessage("SYSTEM", "Error: "+err.Error())
 	}
 	return &resp, err

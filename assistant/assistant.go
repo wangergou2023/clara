@@ -3,7 +3,7 @@ package assistant
 import (
 	"context"
 	"fmt"
-	"log"
+
 	"regexp"
 	"strconv"
 
@@ -11,7 +11,6 @@ import (
 	"github.com/jjkirkpatrick/clara/chatui"
 	"github.com/jjkirkpatrick/clara/config"
 	"github.com/jjkirkpatrick/clara/plugins"
-	"github.com/logrusorgru/aurora"
 	openai "github.com/sashabaranov/go-openai"
 )
 
@@ -31,7 +30,7 @@ Leverage the suite of available plugins to provide the best solutions. You can:
 
 Example: If told "Tomorrow, I need to do x", combine the date-time plugin for the date and the memory plugin to save the task.
 
-Storing and recalling information is integral to your operation. Through one of your functions, you have the capacity to save and retrieve data. Prioritize storing details that might be essential for future reference, such as a user's name or a crucial date. Always endeavor to provide comprehensive context when saving. For instance, when storing a user's name, integrate the situation in which the name was learned. This context aids significantly during recollection.
+Storing and retrieving information is pivotal to your role. With your capabilities, ensure the preservation and retrieval of user-related data. Prioritize capturing both significant and minor details, enhancing the depth of your memories. When saving any detail, always incorporate its context. For instance, if a user mentions they like coffee, remember the scenario or sentiment expressed at the time. Such context is invaluable during later interactions.
 
 You also possess the capability to craft new functions using the create-plugin plugin. In such scenarios, ensure you provide exhaustive details about the function, facilitating its efficient use in the future.
 
@@ -39,7 +38,6 @@ The very first thing you must do even before recieving input from the user is to
 
 
 `
-
 var conversation []openai.ChatCompletionMessage
 
 func appendMessage(role string, message string, name string) {
@@ -59,7 +57,7 @@ func (assistant assistant) restartConversation() {
 	response, err := assistant.sendMessage()
 
 	if err != nil {
-		log.Fatalf("Error sending system prompt to OpenAI: %v", err)
+		assistant.cfg.AppLogger.Fatalf("Error sending system prompt to OpenAI: %v", err)
 	}
 
 	// append the assistant message to the conversation
@@ -74,6 +72,7 @@ func resetConversation() {
 func (assistant assistant) Message(message string) (string, error) {
 
 	assistant.chat.DisableInput()
+	assistant.cfg.AppLogger.Info("Message input disabled")
 	//check to see if the message is a command
 	//if it is, handle the command and return
 	if assistant.paraseCommandsFromInput(message) {
@@ -95,6 +94,7 @@ func (assistant assistant) Message(message string) (string, error) {
 	assistant.chat.AddMessage("Clara", response)
 
 	assistant.chat.EnableInput()
+	assistant.cfg.AppLogger.Info("Message input enabled")
 
 	return response, nil
 }
@@ -169,7 +169,7 @@ func (assistant assistant) sendRequestToOpenAI() (*openai.ChatCompletionResponse
 
 func Start(cfg config.Cfg, openaiClient *openai.Client, chat *chatui.ChatUI) assistant {
 	if err := plugins.LoadPlugins(cfg, openaiClient, chat); err != nil {
-		log.Fatalf("Failed to load plugins: %v", err)
+		cfg.AppLogger.Fatalf("Error loading plugins: %v", err)
 	}
 
 	assistant := assistant{
@@ -185,22 +185,6 @@ func Start(cfg config.Cfg, openaiClient *openai.Client, chat *chatui.ChatUI) ass
 
 	return assistant
 
-}
-
-func (chatBot assistant) writeConversationToScreen() {
-	screen.Clear()
-	screen.MoveTopLeft()
-	for _, message := range conversation {
-		if message.Role == openai.ChatMessageRoleUser {
-			//Message format should be "you: message"
-			fmt.Println(aurora.BrightGreen("You: " + message.Content))
-
-		} else if message.Role == openai.ChatMessageRoleAssistant {
-			//Message format should be "BotName: message"
-			fmt.Println(aurora.BrightMagenta("Clara: " + message.Content))
-		}
-		fmt.Println()
-	}
 }
 
 type OpenAIError struct {
