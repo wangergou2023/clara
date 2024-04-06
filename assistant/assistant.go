@@ -165,7 +165,7 @@ func (assistant assistant) sendRequestToOpenAI() (*openai.ChatCompletionResponse
 }
 
 func Start(cfg config.Cfg, openaiClient *openai.Client, chat *chatui.ChatUI) assistant {
-	if err := plugins.LoadPlugins(cfg, openaiClient, chat); err != nil {
+	if err := plugins.LoadPlugins(cfg, openaiClient); err != nil {
 		cfg.AppLogger.Fatalf("Error loading plugins: %v", err)
 	}
 	cfg.AppLogger.Info("Plugins loaded successfully")

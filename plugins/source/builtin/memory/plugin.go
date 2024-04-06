@@ -10,7 +10,6 @@ import (
 	"github.com/milvus-io/milvus-sdk-go/v2/entity"
 	"github.com/sashabaranov/go-openai"
 	"github.com/sashabaranov/go-openai/jsonschema"
-	"github.com/wangergou2023/clara/chatui"
 	"github.com/wangergou2023/clara/config"
 	"github.com/wangergou2023/clara/plugins"
 )
@@ -47,7 +46,7 @@ type inputDefinition struct {
 	Num_relevant int          `json:"num_relevant"`
 }
 
-func (c *Memory) Init(cfg config.Cfg, openaiClient *openai.Client, chat *chatui.ChatUI) error {
+func (c *Memory) Init(cfg config.Cfg, openaiClient *openai.Client) error {
 	c.cfg = cfg
 	c.openaiClient = openaiClient
 

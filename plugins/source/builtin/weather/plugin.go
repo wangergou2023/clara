@@ -3,12 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/sashabaranov/go-openai"
 	"github.com/sashabaranov/go-openai/jsonschema"
-	"github.com/wangergou2023/clara/chatui"
 	"github.com/wangergou2023/clara/config"
 	"github.com/wangergou2023/clara/plugins"
 )
@@ -20,7 +19,7 @@ type WeatherPlugin struct {
 	openaiClient *openai.Client
 }
 
-func (w *WeatherPlugin) Init(cfg config.Cfg, openaiClient *openai.Client, chat *chatui.ChatUI) error {
+func (w *WeatherPlugin) Init(cfg config.Cfg, openaiClient *openai.Client) error {
 	w.cfg = cfg
 	w.openaiClient = openaiClient
 	return nil
@@ -77,7 +76,7 @@ func (w WeatherPlugin) getWeather(location string) (string, error) {
 		return "", err
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}

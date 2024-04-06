@@ -6,7 +6,6 @@ import (
 
 	"github.com/sashabaranov/go-openai"
 	"github.com/sashabaranov/go-openai/jsonschema"
-	"github.com/wangergou2023/clara/chatui"
 	"github.com/wangergou2023/clara/config"
 	"github.com/wangergou2023/clara/plugins"
 )
@@ -21,7 +20,7 @@ type TimePlugin struct {
 }
 
 // Init方法用于初始化插件
-func (t *TimePlugin) Init(cfg config.Cfg, openaiClient *openai.Client, chat *chatui.ChatUI) error {
+func (t *TimePlugin) Init(cfg config.Cfg, openaiClient *openai.Client) error {
 	t.cfg = cfg
 	t.openaiClient = openaiClient
 	// 通常这里会有更多初始化代码
