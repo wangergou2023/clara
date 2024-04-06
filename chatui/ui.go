@@ -1,72 +1,71 @@
 // chatui.go
 package chatui
 
+// 导入所需的包
 import (
-	"fmt"
-	"strings"
+	"fmt"     // 用于格式化字符串
+	"strings" // 提供用于操作字符串的实用函数
 
-	"github.com/charmbracelet/bubbles/textarea"
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/mitchellh/go-wordwrap"
+	"github.com/charmbracelet/bubbles/textarea" // 提供文本区域组件
+	"github.com/charmbracelet/bubbles/viewport" // 提供可滚动视图组件
+	tea "github.com/charmbracelet/bubbletea"    // 引入bubbletea，用于创建CLI应用
+	"github.com/charmbracelet/lipgloss"         // 用于美化CLI界面的样式库
+	"github.com/mitchellh/go-wordwrap"          // 用于文本自动换行
 )
 
+// 定义启用和禁用输入的消息结构体
 type disableInputMsg struct{}
 type enableInputMsg struct{}
 
+// message 结构体用于存储消息信息
 type message struct {
-	sender string
-	text   string
-	style  lipgloss.Style
+	sender string         // 消息发送者
+	text   string         // 消息文本
+	style  lipgloss.Style // 消息样式
 }
 
+// model 结构体用于存储界面状态
 type model struct {
-	viewport      viewport.Model
-	width         int
-	height        int
-	messages      []message
-	textarea      textarea.Model
-	senderStyle   lipgloss.Style
-	err           error
-	newMessages   chan message
-	inputDisabled bool
-	UserMessages  chan string // Exported channel for user messages
-
+	viewport      viewport.Model // 视图组件，用于显示消息
+	width         int            // 界面宽度
+	height        int            // 界面高度
+	messages      []message      // 消息列表
+	textarea      textarea.Model // 文本输入组件
+	senderStyle   lipgloss.Style // 发送者样式
+	err           error          // 存储可能出现的错误
+	newMessages   chan message   // 用于接收新消息的通道
+	inputDisabled bool           // 输入是否被禁用
+	UserMessages  chan string    // 用于外部获取用户输入消息的通道
 }
 
+// ChatUI 结构体用于管理整个聊天UI
 type ChatUI struct {
-	model     model
-	prog      *tea.Program
-	messages  chan message
-	shouldRun bool
+	model     model        // UI模型
+	prog      *tea.Program // Bubble Tea程序实例
+	messages  chan message // 消息通道
+	shouldRun bool         // 程序是否应该继续运行
 }
-
-// The rest of your functions/methods (such as initialModel, formatMessages, etc.)
-// should be unchanged and added here, but without the main() function.
 
 func initialModel() model {
-	ta := textarea.New()
-	ta.Placeholder = "Send a message..."
-	ta.Focus()
+	ta := textarea.New()                 // 创建一个新的文本区域
+	ta.Placeholder = "Send a message..." // 设置占位符
+	ta.Focus()                           // 聚焦文本区域
 
-	ta.Prompt = "┃ "
-	ta.CharLimit = 280
+	ta.Prompt = "┃ "   // 设置提示符
+	ta.CharLimit = 280 // 设置字符限制
 
-	//set width to the width of the viewport
+	ta.SetWidth(30) // 设置文本区域宽度
+	ta.SetHeight(3) // 设置文本区域高度
 
-	ta.SetWidth(30)
-	ta.SetHeight(3)
+	ta.FocusedStyle.CursorLine = lipgloss.NewStyle() // 设置聚焦样式
 
-	ta.FocusedStyle.CursorLine = lipgloss.NewStyle()
+	ta.ShowLineNumbers = false // 不显示行号
 
-	ta.ShowLineNumbers = false
-
-	vp := viewport.New(30, 5)
+	vp := viewport.New(30, 5) // 创建一个新的视图组件
 	vp.SetContent(`Welcome to Clara!
-Type a message and press Enter to send.`)
+Type a message and press Enter to send.`) // 设置初始内容
 
-	ta.KeyMap.InsertNewline.SetEnabled(false)
+	ta.KeyMap.InsertNewline.SetEnabled(false) // 禁止插入新行
 
 	return model{
 		textarea:     ta,
@@ -74,14 +73,14 @@ Type a message and press Enter to send.`)
 		viewport:     vp,
 		senderStyle:  lipgloss.NewStyle().Foreground(lipgloss.Color("5")),
 		err:          nil,
-		newMessages:  make(chan message, 100), // buffer of 100 messages; adjust as needed
-		UserMessages: make(chan string),       // Initialize the channel
+		newMessages:  make(chan message, 100), // 创建消息通道，缓冲区大小100
+		UserMessages: make(chan string),       // 创建用户消息通道
 	}
 }
 
 func NewChatUI() (*ChatUI, error) {
-	m := initialModel()
-	p := tea.NewProgram(m)
+	m := initialModel()    // 初始化模型
+	p := tea.NewProgram(m) // 创建Bubble Tea程序
 
 	chat := &ChatUI{
 		model:    m,
@@ -89,33 +88,33 @@ func NewChatUI() (*ChatUI, error) {
 		messages: make(chan message),
 	}
 
-	go chat.listenForMessages()
+	go chat.listenForMessages() // 启动消息监听协程
 
 	return chat, nil
 }
 
 func (c *ChatUI) Run() error {
-	_, err := c.prog.Run()
-	close(c.messages)
+	_, err := c.prog.Run() // 运行Bubble Tea程序
+	close(c.messages)      // 程序结束时关闭消息通道
 	return err
 }
 
 func (c *ChatUI) listenForMessages() {
-	for msg := range c.messages {
-		c.model.messages = append(c.model.messages, msg)
-		c.model.viewport.SetContent(formatMessages(c.model.messages, c.model.viewport.Width))
-		c.model.viewport.GotoBottom() // Add this line to ensure the viewport is at the bottom
+	for msg := range c.messages { // 从消息通道接收消息
+		c.model.messages = append(c.model.messages, msg)                                      // 将消息添加到模型中
+		c.model.viewport.SetContent(formatMessages(c.model.messages, c.model.viewport.Width)) // 更新视图内容
+		c.model.viewport.GotoBottom()                                                         // 滚动到底部
 	}
 }
 
 func (c *ChatUI) AddMessage(sender, text string) {
-	msgStyle := lipgloss.NewStyle() // default style
+	msgStyle := lipgloss.NewStyle() // 默认样式
 	if sender == "User" {
 		msgStyle = c.model.senderStyle
 	} else if sender == "Clara" {
 		msgStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
-	} else if sender == "SYSTEM" { // Add this case
-		msgStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("9")) // 9 for red in lipgloss' default palette
+	} else if sender == "SYSTEM" {
+		msgStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
 	}
 
 	newMessage := message{
@@ -123,7 +122,7 @@ func (c *ChatUI) AddMessage(sender, text string) {
 		text:   text,
 		style:  msgStyle,
 	}
-	c.model.newMessages <- newMessage
+	c.model.newMessages <- newMessage // 将新消息发送到通道
 }
 
 func (m model) Init() tea.Cmd {
