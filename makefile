@@ -9,4 +9,5 @@ clean:
 clara: clean
 	GOOS=$(GOOS) GOARCH=$(GOARCH) go build -buildmode=plugin -o $(PLUGIN_COMPILED_DIR)/memory.so $(PLUGIN_SRC_DIR)/memory/plugin.go
 	GOOS=$(GOOS) GOARCH=$(GOARCH) go build -buildmode=plugin -o $(PLUGIN_COMPILED_DIR)/time.so $(PLUGIN_SRC_DIR)/time/plugin.go
+	GOOS=$(GOOS) GOARCH=$(GOARCH) go build -buildmode=plugin -o $(PLUGIN_COMPILED_DIR)/weather.so $(PLUGIN_SRC_DIR)/weather/plugin.go
 	GOOS=$(GOOS) GOARCH=$(GOARCH) go build 

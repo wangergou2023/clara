@@ -19,6 +19,8 @@ type MalvusCfg struct {
 type Cfg struct {
 	openAiAPIKey string // OpenAI API的密钥
 
+	openWeatherMapAPIKey string // OpenWeatherMap API的密钥
+
 	pluginsPath string // 插件存放的路径
 	logName     string // 日志文件的名称
 
@@ -37,9 +39,10 @@ func New() Cfg {
 
 	// 初始化主配置
 	cfg := Cfg{
-		openAiAPIKey: "sk-2uEpTNt8ESEvkQUG30De33002fEc411e841a29FaD4Db5cE5", // OpenAI API的密钥
-		pluginsPath:  "./plugins",                                           // 插件路径
-		malvusCfg:    malvusCfg,                                             // 设置Milvus配置
+		openAiAPIKey:         "sk-2uEpTNt8ESEvkQUG30De33002fEc411e841a29FaD4Db5cE5", // OpenAI API的密钥
+		openWeatherMapAPIKey: "787947f021c60a672678b3a9a20b2d4b",                    // OpenWeatherMap API的密钥
+		pluginsPath:          "./plugins",                                           // 插件路径
+		malvusCfg:            malvusCfg,                                             // 设置Milvus配置
 	}
 
 	// 初始化日志记录器
@@ -67,6 +70,10 @@ func (c Cfg) PluginsPath() string {
 func (c Cfg) SetOpenAiAPIKey(openAiAPIKey string) Cfg {
 	c.openAiAPIKey = openAiAPIKey
 	return c
+}
+
+func (c Cfg) OpenWeatherMapAPIKey() string {
+	return c.openWeatherMapAPIKey
 }
 
 // MalvusApiEndpoint方法返回Milvus API终端的地址
