@@ -11,7 +11,6 @@ require (
 	github.com/manifoldco/promptui v0.9.0
 	github.com/milvus-io/milvus-sdk-go/v2 v2.2.7
 	github.com/mitchellh/go-wordwrap v1.0.1
-	github.com/sashabaranov/go-openai v1.14.2
 	github.com/sirupsen/logrus v1.4.2
 )
 
@@ -42,6 +41,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/rogpeppe/go-internal v1.8.1 // indirect
+	github.com/sashabaranov/go-openai v1.20.5 // indirect
 	github.com/tidwall/gjson v1.14.4 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect

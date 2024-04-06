@@ -153,7 +153,7 @@ func (assistant assistant) sendRequestToOpenAI() (*openai.ChatCompletionResponse
 	resp, err := assistant.Client.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
-			Model:        assistant.cfg.OpenAiModel(),
+			Model:        openai.GPT3Dot5Turbo0613,
 			Messages:     conversation,
 			Functions:    assistant.functionDefinitions,
 			FunctionCall: "auto",
