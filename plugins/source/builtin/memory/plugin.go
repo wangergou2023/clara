@@ -77,13 +77,13 @@ func (c Memory) Description() string {
 func (c Memory) FunctionDefinition() openai.FunctionDefinition {
 	return openai.FunctionDefinition{
 		Name:        "memory",
-		Description: "Store and retrieve memories from long term memory. Use requestType 'set' to add memories to the database, use requestType 'get' to retrieve the most relevant memories. When first starting you should use the 'hydrate' function to recall past memories about the user.'",
+		Description: "从长期记忆中存储和检索记忆。使用requestType 'set'向数据库添加记忆，使用requestType 'get'检索最相关的记忆。首次启动时，你应该使用'hydrate'功能回顾用户的过往记忆。",
 		Parameters: jsonschema.Definition{
 			Type: jsonschema.Object,
 			Properties: map[string]jsonschema.Definition{
 				"requestType": {
 					Type:        jsonschema.String,
-					Description: "The type of request to make  'set' , 'get' or 'hydrate'. 'Set' will add memories to the database, 'get' will return the most relevant memories. when getting a memory, you should always include the memory fiel. 'hydrate' will return a prompt with all the memories about the user.",
+					Description: "要进行的请求类型 'set'，'get' 或 'hydrate'。'set' 将记忆添加到数据库中，'get' 将返回最相关的记忆。获取记忆时，你应该总是包含记忆字段。'hydrate'将返回包含用户所有记忆的提示。",
 				},
 				"memories": {
 					Type: jsonschema.Array,
@@ -92,24 +92,24 @@ func (c Memory) FunctionDefinition() openai.FunctionDefinition {
 						Properties: map[string]jsonschema.Definition{
 							"memory": {
 								Type:        jsonschema.String,
-								Description: "The individual memory to add. You should provide as much context as possible to go along with the memory.",
+								Description: "要添加的个别记忆。你应该提供尽可能多的上下文来配合记忆。",
 							},
 							"type": {
 								Type:        jsonschema.String,
-								Description: "The type of memory, for example: 'personality', 'food', etc.",
+								Description: "记忆的类型，例如：'personality', 'food'等。",
 							},
 							"detail": {
 								Type:        jsonschema.String,
-								Description: "Specific detail about the type, for example: 'likes pizza', 'is flirty', etc.",
+								Description: "关于类型的具体细节，例如：'喜欢披萨'，'是风情万种的'等。",
 							},
 						},
 						Required: []string{"memory", "type", "detail"},
 					},
-					Description: "The array of memories to add or get. Each memory contains its individual content, type, and detail. This is required for both 'set' and 'get' requests.",
+					Description: "要添加或获取的记忆数组。每个记忆包含其个别内容、类型和细节。这对于'set'和'get'请求都是必需的。",
 				},
 				"num_relevant": {
 					Type:        jsonschema.Integer,
-					Description: "The number of relevant memories to return, for example: 5.",
+					Description: "要返回的相关记忆的数量，例如：5。",
 				},
 			},
 			Required: []string{"requestType"},
@@ -411,7 +411,7 @@ func (c *Memory) HydrateUserMemories() (string, error) {
 	uniqueMemories := make(map[string]bool)
 	var memoryList []string
 
-	prompt := "You are an AI assistant called Clara, you have a long term memory, here are some memories about the user you can use: "
+	prompt := "你是一个名叫Clara的AI助手，你拥有长期记忆，以下是一些关于用户的记忆，你可以使用："
 
 	for _, m := range memories {
 		// Get each memory from the vector database based on user ID and memory type
