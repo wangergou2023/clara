@@ -31,13 +31,13 @@ Extensible AI assistant that seamlessly interacts with various plugins to fulfil
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/jjkirkpatrick/clara
+git clone https://github.com/wangergou2023/clara
 ```
 
 2. Navigate to the project directory and install the required packages:
 ```bash
 cd clara
-make buildAssistant
+make clara
 ```
 
 3. Set up the OpenAI API key and other configurations as required.

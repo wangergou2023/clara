@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jjkirkpatrick/clara/chatui"
-	"github.com/jjkirkpatrick/clara/config"
-	"github.com/jjkirkpatrick/clara/plugins"
 	milvus "github.com/milvus-io/milvus-sdk-go/v2/client"
 	"github.com/milvus-io/milvus-sdk-go/v2/entity"
 	"github.com/sashabaranov/go-openai"
 	"github.com/sashabaranov/go-openai/jsonschema"
+	"github.com/wangergou2023/clara/chatui"
+	"github.com/wangergou2023/clara/config"
+	"github.com/wangergou2023/clara/plugins"
 )
 
 var Plugin plugins.Plugin = &Memory{}
@@ -158,6 +158,7 @@ func (c Memory) Execute(jsonInput string) (string, error) {
 			c.cfg.AppLogger.Info("Error getting memory: ", err)
 			return fmt.Sprintf(`%v`, err), err
 		}
+		c.cfg.AppLogger.Info("Memories get successfully")
 		return fmt.Sprintf(`%v`, memoryResponse), nil
 	case "hydrate":
 		prompt, err := c.HydrateUserMemories()
@@ -165,6 +166,7 @@ func (c Memory) Execute(jsonInput string) (string, error) {
 			c.cfg.AppLogger.Info("Error hydrating user memories: ", err)
 			return fmt.Sprintf(`%v`, err), err
 		}
+		c.cfg.AppLogger.Info("Memories hydrate successfully")
 		return prompt, nil
 	default:
 		return "unknown request type check out Example for how to use the memory plug", nil

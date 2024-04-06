@@ -1,4 +1,4 @@
-module github.com/jjkirkpatrick/clara
+module github.com/wangergou2023/clara
 
 go 1.19
 

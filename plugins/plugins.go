@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"plugin"
 
-	"github.com/jjkirkpatrick/clara/chatui"
-	"github.com/jjkirkpatrick/clara/config"
 	"github.com/sashabaranov/go-openai"
+	"github.com/wangergou2023/clara/chatui"
+	"github.com/wangergou2023/clara/config"
 )
 
 var loadedPlugins = make(map[string]Plugin)
@@ -40,22 +40,6 @@ func LoadPlugins(cfg config.Cfg, openaiClient *openai.Client, chat *chatui.ChatU
 		if filepath.Ext(file.Name()) == ".so" {
 			cfg.AppLogger.Info("Loading plugin: ", file.Name())
 			err := loadSinglePlugin(cfg.PluginsPath()+"/compiled/"+file.Name(), cfg, openaiClient, chat)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	// Load plugins from generated folder
-	files, err = os.ReadDir(cfg.PluginsPath() + "/generated")
-	if err != nil {
-		return err
-	}
-
-	for _, file := range files {
-		if filepath.Ext(file.Name()) == ".so" {
-			cfg.AppLogger.Info("Loading plugin: ", file.Name())
-			err := loadSinglePlugin(cfg.PluginsPath()+"/generated/"+file.Name(), cfg, openaiClient, chat)
 			if err != nil {
 				return err
 			}

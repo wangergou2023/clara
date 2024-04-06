@@ -8,10 +8,10 @@ import (
 	"strconv"
 
 	"github.com/inancgumus/screen"
-	"github.com/jjkirkpatrick/clara/chatui"
-	"github.com/jjkirkpatrick/clara/config"
-	"github.com/jjkirkpatrick/clara/plugins"
 	openai "github.com/sashabaranov/go-openai"
+	"github.com/wangergou2023/clara/chatui"
+	"github.com/wangergou2023/clara/config"
+	"github.com/wangergou2023/clara/plugins"
 )
 
 type assistant struct {
@@ -171,7 +171,7 @@ func Start(cfg config.Cfg, openaiClient *openai.Client, chat *chatui.ChatUI) ass
 	if err := plugins.LoadPlugins(cfg, openaiClient, chat); err != nil {
 		cfg.AppLogger.Fatalf("Error loading plugins: %v", err)
 	}
-
+	cfg.AppLogger.Info("Plugins loaded successfully")
 	assistant := assistant{
 		cfg:                 cfg,
 		Client:              openaiClient,
@@ -183,6 +183,7 @@ func Start(cfg config.Cfg, openaiClient *openai.Client, chat *chatui.ChatUI) ass
 
 	assistant.restartConversation()
 
+	cfg.AppLogger.Info("Assistant is ready!")
 	return assistant
 
 }

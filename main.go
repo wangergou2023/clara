@@ -4,14 +4,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/jjkirkpatrick/clara/assistant"
-	"github.com/jjkirkpatrick/clara/chatui"
-	"github.com/jjkirkpatrick/clara/config"
+	"github.com/wangergou2023/clara/assistant"
+	"github.com/wangergou2023/clara/chatui"
+	"github.com/wangergou2023/clara/config"
 	openai "github.com/sashabaranov/go-openai"
 )
 
 var cfg = config.New()
-var openaiClient *openai.Client
 
 func main() {
 	if cfg.OpenAiAPIKey() == "" {
@@ -27,7 +26,10 @@ func main() {
 
 	cfg.AppLogger.Info("Clara is starting up... Please wait a moment.")
 
-	openaiClient = openai.NewClient(cfg.OpenAiAPIKey())
+	config := openai.DefaultConfig(cfg.OpenAiAPIKey())
+	//need"/v1"
+	config.BaseURL = "https://llxspace.website/v1"
+	openaiClient := openai.NewClientWithConfig(config)
 
 	chat, err := chatui.NewChatUI()
 	clara := assistant.Start(cfg, openaiClient, chat)
