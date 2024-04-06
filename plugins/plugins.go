@@ -8,8 +8,7 @@ import (
 	"path/filepath" // 用于文件路径操作
 	"plugin"        // 支持从共享库动态加载代码
 
-	"github.com/sashabaranov/go-openai" // OpenAI GPT库
-	// 聊天界面包
+	"github.com/sashabaranov/go-openai"     // OpenAI GPT库
 	"github.com/wangergou2023/clara/config" // 配置包
 )
 
