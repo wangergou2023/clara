@@ -1,26 +1,28 @@
 package assistant
 
+// 导入所需的包
 import (
-	"context"
-	"fmt"
+	"context" // 用于控制请求、超时和取消
+	"fmt"     // 用于格式化输出
 
-	"regexp"
-	"strconv"
+	"regexp"  // 用于正则表达式
+	"strconv" // 用于字符串和其他类型的转换
 
-	"github.com/inancgumus/screen"
-	openai "github.com/sashabaranov/go-openai"
-	"github.com/wangergou2023/clara/chatui"
-	"github.com/wangergou2023/clara/config"
-	"github.com/wangergou2023/clara/plugins"
+	// 用于控制屏幕输出
+	openai "github.com/sashabaranov/go-openai" // OpenAI GPT的Go客户端
+	// 聊天界面
+	"github.com/wangergou2023/clara/config"  // 配置
+	"github.com/wangergou2023/clara/plugins" // 插件系统
 )
 
+// 定义助手结构体，包括配置、OpenAI客户端、函数定义和聊天界面
 type assistant struct {
 	cfg                 config.Cfg
 	Client              *openai.Client
 	functionDefinitions []openai.FunctionDefinition
-	chat                *chatui.ChatUI
 }
 
+// 定义系统提示信息，指导如何使用AI助手
 var systemPrompt = `
 你是一个名为Clara的多才多艺的女性AI助手。你启动时的首要任务是“激活”你的记忆，即立即回忆并熟悉与用户及其偏好最相关的数据。这有助于个性化并增强用户互动。
 
@@ -35,8 +37,11 @@ var systemPrompt = `
 在接收到用户输入之前，你必须做的第一件事就是使用记忆插件来激活你的记忆。这将使你能够为用户提供最好的可能体验。
 
 `
+
+// 定义全局变量conversation，用于存储对话历史
 var conversation []openai.ChatCompletionMessage
 
+// appendMessage函数用于向对话中添加消息
 func appendMessage(role string, message string, name string) {
 	conversation = append(conversation, openai.ChatCompletionMessage{
 		Role:    role,
@@ -45,61 +50,53 @@ func appendMessage(role string, message string, name string) {
 	})
 }
 
-func (assistant assistant) restartConversation() {
-	resetConversation()
-	// append the system prompt to the conversation
-	appendMessage(openai.ChatMessageRoleSystem, systemPrompt, "")
+// resetConversation函数用于清空对话历史
+func resetConversation() {
+	conversation = []openai.ChatCompletionMessage{}
+}
 
-	// send the system prompt to openai
-	response, err := assistant.sendMessage()
+// restartConversation函数用于重置并重新开始对话
+func (assistant assistant) restartConversation() {
+	resetConversation() // 重置对话
+
+	appendMessage(openai.ChatMessageRoleSystem, systemPrompt, "") // 添加系统提示到对话
+
+	response, err := assistant.sendMessage() // 发送系统提示到OpenAI并获取回复
 
 	if err != nil {
 		assistant.cfg.AppLogger.Fatalf("Error sending system prompt to OpenAI: %v", err)
 	}
 
-	// append the assistant message to the conversation
-	appendMessage(openai.ChatMessageRoleAssistant, response, "")
-
+	appendMessage(openai.ChatMessageRoleAssistant, response, "") // 添加助手回复到对话
 }
 
-func resetConversation() {
-	conversation = []openai.ChatCompletionMessage{}
-}
-
+// Message函数用于处理用户消息
 func (assistant assistant) Message(message string) (string, error) {
 
-	assistant.chat.DisableInput()
-	assistant.cfg.AppLogger.Info("Message input disabled")
+	appendMessage(openai.ChatMessageRoleUser, message, "") // 添加用户消息到对话
 
-	// append the user message to the conversation
-	appendMessage(openai.ChatMessageRoleUser, message, "")
-
-	response, err := assistant.sendMessage()
+	response, err := assistant.sendMessage() // 发送消息到OpenAI并获取回复
 
 	if err != nil {
 		return "", err
 	}
 
-	// append the assistant message to the conversation
-	appendMessage(openai.ChatMessageRoleAssistant, response, "")
-	// print the conversation
-	assistant.chat.AddMessage("Clara", response)
-
-	assistant.chat.EnableInput()
-	assistant.cfg.AppLogger.Info("Message input enabled")
+	appendMessage(openai.ChatMessageRoleAssistant, response, "") // 添加助手回复到对话
+	fmt.Printf("Clara:%s\r\n", response)
 
 	return response, nil
 }
 
+// sendMessage函数用于向OpenAI发送请求并获取回复
 func (assistant assistant) sendMessage() (string, error) {
-	resp, err := assistant.sendRequestToOpenAI()
+	resp, err := assistant.sendRequestToOpenAI() // 发送请求到OpenAI
 
 	if err != nil {
 		return "", err
 	}
 
 	if resp.Choices[0].FinishReason == openai.FinishReasonFunctionCall {
-		responseContent, err := assistant.handleFunctionCall(resp)
+		responseContent, err := assistant.handleFunctionCall(resp) // 处理函数调用
 		if err != nil {
 			return "", err
 		}
@@ -109,18 +106,17 @@ func (assistant assistant) sendMessage() (string, error) {
 	return resp.Choices[0].Message.Content, nil
 }
 
+// handleFunctionCall函数用于处理OpenAI回复中的函数调用
 func (assistant assistant) handleFunctionCall(resp *openai.ChatCompletionResponse) (string, error) {
 
-	funcName := resp.Choices[0].Message.FunctionCall.Name
-	// check to see if a plugin is loaded with the same name as the function call
-	ok := plugins.IsPluginLoaded(funcName)
+	funcName := resp.Choices[0].Message.FunctionCall.Name // 获取函数名称
+	ok := plugins.IsPluginLoaded(funcName)                // 检查是否加载了相应插件
 
 	if !ok {
 		return "", fmt.Errorf("no plugin loaded with name %v", funcName)
 	}
 
-	// call the plugin with the arguments
-	jsonResponse, err := plugins.CallPlugin(resp.Choices[0].Message.FunctionCall.Name, resp.Choices[0].Message.FunctionCall.Arguments)
+	jsonResponse, err := plugins.CallPlugin(resp.Choices[0].Message.FunctionCall.Name, resp.Choices[0].Message.FunctionCall.Arguments) // 调用插件
 
 	if err != nil {
 		return "", err
@@ -128,19 +124,19 @@ func (assistant assistant) handleFunctionCall(resp *openai.ChatCompletionRespons
 	appendMessage(openai.ChatMessageRoleFunction, resp.Choices[0].Message.Content, funcName)
 	appendMessage(openai.ChatMessageRoleFunction, jsonResponse, "functionName")
 
-	resp, err = assistant.sendRequestToOpenAI()
+	resp, err = assistant.sendRequestToOpenAI() // 发送请求到OpenAI
 	if err != nil {
 		return "", err
 	}
 
-	// Check if the response is another function call
 	if resp.Choices[0].FinishReason == openai.FinishReasonFunctionCall {
-		return assistant.handleFunctionCall(resp)
+		return assistant.handleFunctionCall(resp) // 递归处理函数调用
 	}
 
 	return resp.Choices[0].Message.Content, nil
 }
 
+// sendRequestToOpenAI函数用于向OpenAI发送请求
 func (assistant assistant) sendRequestToOpenAI() (*openai.ChatCompletionResponse, error) {
 	resp, err := assistant.Client.CreateChatCompletion(
 		context.Background(),
@@ -153,13 +149,14 @@ func (assistant assistant) sendRequestToOpenAI() (*openai.ChatCompletionResponse
 	)
 
 	if err != nil {
-		assistant.openaiError(err)
+		assistant.openaiError(err) // 处理OpenAI错误
 		fmt.Println("Error: ", err)
 	}
 	return &resp, err
 }
 
-func Start(cfg config.Cfg, openaiClient *openai.Client, chat *chatui.ChatUI) assistant {
+// Start函数用于启动助手
+func Start(cfg config.Cfg, openaiClient *openai.Client) assistant {
 	if err := plugins.LoadPlugins(cfg, openaiClient); err != nil {
 		cfg.AppLogger.Fatalf("Error loading plugins: %v", err)
 	}
@@ -168,10 +165,7 @@ func Start(cfg config.Cfg, openaiClient *openai.Client, chat *chatui.ChatUI) ass
 		cfg:                 cfg,
 		Client:              openaiClient,
 		functionDefinitions: plugins.GenerateOpenAIFunctionsDefinition(),
-		chat:                chat,
 	}
-
-	assistant.chat.ClearHistory()
 
 	assistant.restartConversation()
 
@@ -180,17 +174,19 @@ func Start(cfg config.Cfg, openaiClient *openai.Client, chat *chatui.ChatUI) ass
 
 }
 
+// OpenAIError结构体用于封装OpenAI错误
 type OpenAIError struct {
 	StatusCode int
 }
 
+// parseOpenAIError函数用于解析OpenAI错误
 func parseOpenAIError(err error) *OpenAIError {
 	var statusCode int
 
 	reStatusCode := regexp.MustCompile(`status code: (\d+)`)
 
 	if match := reStatusCode.FindStringSubmatch(err.Error()); match != nil {
-		statusCode, _ = strconv.Atoi(match[1]) // Convert string to int
+		statusCode, _ = strconv.Atoi(match[1]) // 将字符串转换为整数
 	}
 
 	return &OpenAIError{
@@ -198,14 +194,12 @@ func parseOpenAIError(err error) *OpenAIError {
 	}
 }
 
+// openaiError函数用于处理OpenAI错误
 func (assistant assistant) openaiError(err error) {
 	parsedError := parseOpenAIError(err)
 
 	switch parsedError.StatusCode {
 	case 401:
-		screen.Clear()
-		screen.MoveTopLeft()
-
 		fmt.Println("Invalid OpenAI API key. Please enter a valid key.")
 		fmt.Println("You can find your API key at https://beta.openai.com/account/api-keys")
 		fmt.Println("You can also set your API key as an environment variable named OPENAI_API_KEY")

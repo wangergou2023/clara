@@ -1,13 +1,14 @@
 package main
 
 import (
+	"bufio"
+	"fmt"
 	"os"
-	"time"
+	"strings"
 
-	"github.com/wangergou2023/clara/assistant"
-	"github.com/wangergou2023/clara/chatui"
-	"github.com/wangergou2023/clara/config"
 	openai "github.com/sashabaranov/go-openai"
+	"github.com/wangergou2023/clara/assistant"
+	"github.com/wangergou2023/clara/config"
 )
 
 var cfg = config.New()
@@ -31,35 +32,17 @@ func main() {
 	config.BaseURL = "https://llxspace.website/v1"
 	openaiClient := openai.NewClientWithConfig(config)
 
-	chat, err := chatui.NewChatUI()
-	clara := assistant.Start(cfg, openaiClient, chat)
+	clara := assistant.Start(cfg, openaiClient)
 
-	if err != nil {
-		cfg.AppLogger.Fatalf("Error initializing chat UI: %v", err)
-	}
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Println("Conversation")
+	fmt.Println("---------------------")
 
-	go func() {
-		if err := chat.Run(); err != nil {
-			cfg.AppLogger.Fatalf("Error running chat UI: %v", err)
-		}
-	}()
-
-	userMessagesChan := chat.GetUserMessagesChannel()
 	for {
-		select {
-		case userMessage, ok := <-userMessagesChan: // userMessage is a string containing the user's message.
-			if !ok {
-				// If the channel is closed, exit the loop.
-				cfg.AppLogger.Info("User message channel closed. Exiting.")
-				return
-			}
-
-			clara.Message(userMessage)
-		case <-time.After(10 * time.Minute):
-			// Timeout: if there's no activity for 5 minutes, exit.
-			cfg.AppLogger.Info("No activity for 10 minutes. Exiting.")
-			return
-		}
+		fmt.Print("-> ")
+		text, _ := reader.ReadString('\n')
+		// convert CRLF to LF
+		text = strings.Replace(text, "\n", "", -1)
+		clara.Message(text)
 	}
-
 }
