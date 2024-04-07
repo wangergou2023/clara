@@ -14,17 +14,6 @@ import (
 var cfg = config.New()
 
 func main() {
-	if cfg.OpenAiAPIKey() == "" {
-		key := os.Getenv("OPENAI_API_KEY")
-
-		if key != "" {
-			cfg = cfg.SetOpenAiAPIKey(key)
-		} else {
-			key := assistant.GetUserMessage("Please enter your OpenAI API key: ")
-			cfg = cfg.SetOpenAiAPIKey(key)
-		}
-	}
-
 	cfg.AppLogger.Info("Clara is starting up... Please wait a moment.")
 
 	config := openai.DefaultConfig(cfg.OpenAiAPIKey())
