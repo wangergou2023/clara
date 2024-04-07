@@ -57,11 +57,11 @@ func (c *Memory) Init(cfg config.Cfg, openaiClient *openai.Client) error {
 	err := c.initMilvusSchema()
 
 	if err != nil {
-		c.cfg.AppLogger.Info("Error initializing Milvus schema: ", err)
+		fmt.Println("Error initializing Milvus schema: ", err)
 		return err
 	}
 
-	c.cfg.AppLogger.Info("Memory plugin initialized successfully")
+	fmt.Println("Memory plugin initialized successfully")
 	return nil
 }
 
@@ -121,7 +121,7 @@ func (c Memory) Execute(jsonInput string) (string, error) {
 	var args inputDefinition
 	err := json.Unmarshal([]byte(jsonInput), &args)
 	if err != nil {
-		c.cfg.AppLogger.Info("Error unmarshalling JSON input: ", err)
+		fmt.Println("Error unmarshalling JSON input: ", err)
 		return "", err
 	}
 
@@ -140,32 +140,32 @@ func (c Memory) Execute(jsonInput string) (string, error) {
 		for _, memory := range args.Memories {
 			ok, err := c.setMemory(memory.Memory, memory.Type, memory.Detail)
 			if err != nil {
-				c.cfg.AppLogger.Info("Error setting memory: ", err)
+				fmt.Println("Error setting memory: ", err)
 				return fmt.Sprintf(`%v`, err), err
 			}
 			if !ok {
 				return "Failed to set a memory", nil
 			}
 		}
-		c.cfg.AppLogger.Info("Memories set successfully")
+		fmt.Println("Memories set successfully")
 		return "Memories set successfully", nil
 
 	case "get":
 		// Note: This assumes that for 'get', you'll retrieve memories based on the first item in the memories slice. Adjust as needed.
 		memoryResponse, err := c.getMemory(args.Memories[0], args.Num_relevant)
 		if err != nil {
-			c.cfg.AppLogger.Info("Error getting memory: ", err)
+			fmt.Println("Error getting memory: ", err)
 			return fmt.Sprintf(`%v`, err), err
 		}
-		c.cfg.AppLogger.Info("Memories get successfully")
+		fmt.Println("Memories get successfully")
 		return fmt.Sprintf(`%v`, memoryResponse), nil
 	case "hydrate":
 		prompt, err := c.HydrateUserMemories()
 		if err != nil {
-			c.cfg.AppLogger.Info("Error hydrating user memories: ", err)
+			fmt.Println("Error hydrating user memories: ", err)
 			return fmt.Sprintf(`%v`, err), err
 		}
-		c.cfg.AppLogger.Info("Memories hydrate successfully")
+		fmt.Println("Memories hydrate successfully")
 		return prompt, nil
 	default:
 		return "unknown request type check out Example for how to use the memory plug", nil
@@ -178,7 +178,7 @@ func (c Memory) getEmbeddingsFromOpenAI(data string) openai.Embedding {
 		Model: openai.AdaEmbeddingV2,
 	})
 	if err != nil {
-		c.cfg.AppLogger.Info("Error getting embeddings from OpenAI: ", err)
+		fmt.Println("Error getting embeddings from OpenAI: ", err)
 		fmt.Println(err)
 	}
 
@@ -214,7 +214,7 @@ func (c Memory) setMemory(newMemory, memoryType, memoryDetail string) (bool, err
 	_, err := c.milvusClient.Insert(context.Background(), c.cfg.MalvusCollectionName(), "", memoryColumn, vectorColumn)
 
 	if err != nil {
-		c.cfg.AppLogger.Info("Error inserting into Milvus client: ", err)
+		fmt.Println("Error inserting into Milvus client: ", err)
 		return false, err
 	}
 
@@ -241,7 +241,7 @@ func (c Memory) getMemory(memory memoryItem, num_relevant int) ([]memoryResult, 
 	searchResult, err := c.milvusClient.Search(ctx, c.cfg.MalvusCollectionName(), partitions, expr, outputFields, vectors, vectorField, metricType, topK, searchParam, options...)
 
 	if err != nil {
-		c.cfg.AppLogger.Info("Error searching in Milvus client: ", err)
+		fmt.Println("Error searching in Milvus client: ", err)
 		return nil, err
 	}
 
@@ -279,7 +279,7 @@ func (c Memory) getStringSliceFromColumn(column entity.Column) []string {
 		val, err := column.GetAsString(i)
 		if err != nil {
 			// handle error or continue with a placeholder value
-			c.cfg.AppLogger.Info("Error getting string from column: ", err)
+			fmt.Println("Error getting string from column: ", err)
 			results[i] = "" // or some placeholder value
 		} else {
 			results[i] = val
@@ -322,21 +322,21 @@ func (c Memory) initMilvusSchema() error {
 		}
 		err := c.milvusClient.CreateCollection(context.Background(), schema, 1)
 		if err != nil {
-			c.cfg.AppLogger.Info("Error creating collection in Milvus client: ", err)
+			fmt.Println("Error creating collection in Milvus client: ", err)
 			return err
 		}
 
 		idx, err := entity.NewIndexIvfFlat(entity.L2, 2)
 
 		if err != nil {
-			c.cfg.AppLogger.Info("Error creating index in Milvus client: ", err)
+			fmt.Println("Error creating index in Milvus client: ", err)
 			return err
 		}
 
 		err = c.milvusClient.CreateIndex(context.Background(), c.cfg.MalvusCollectionName(), "embeddings", idx, false)
 
 		if err != nil {
-			c.cfg.AppLogger.Info("Error creating index in Milvus client: ", err)
+			fmt.Println("Error creating index in Milvus client: ", err)
 			return err
 		}
 
@@ -346,14 +346,14 @@ func (c Memory) initMilvusSchema() error {
 	loaded, err := c.milvusClient.GetLoadState(context.Background(), c.cfg.MalvusCollectionName(), []string{})
 
 	if err != nil {
-		c.cfg.AppLogger.Info("Error getting load state from Milvus client: ", err)
+		fmt.Println("Error getting load state from Milvus client: ", err)
 		return err
 	}
 
 	if loaded == entity.LoadStateNotLoad {
 		err = c.milvusClient.LoadCollection(context.Background(), c.cfg.MalvusCollectionName(), false)
 		if err != nil {
-			c.cfg.AppLogger.Info("Error loading collection from Milvus client: ", err)
+			fmt.Println("Error loading collection from Milvus client: ", err)
 			return err
 		}
 	}

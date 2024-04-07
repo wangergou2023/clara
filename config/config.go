@@ -2,12 +2,9 @@
 package config
 
 // 导入必要的包
-import (
-	"fmt" // 用于格式化输出
-	"os"  // 用于操作系统相关的操作，如文件操作
 
-	"github.com/sirupsen/logrus" // 引入logrus包，用于日志记录
-)
+// 用于格式化输出
+// 用于操作系统相关的操作，如文件操作
 
 // 定义Milvus数据库配置的结构体
 type MalvusCfg struct {
@@ -25,8 +22,6 @@ type Cfg struct {
 	logName     string // 日志文件的名称
 
 	malvusCfg MalvusCfg // Milvus数据库的配置
-
-	AppLogger *logrus.Logger // 应用程序使用的日志记录器
 }
 
 // New函数用于创建并初始化Cfg配置实例
@@ -43,14 +38,6 @@ func New() Cfg {
 		openWeatherMapAPIKey: "787947f021c60a672678b3a9a20b2d4b",                    // OpenWeatherMap API的密钥
 		pluginsPath:          "./plugins",                                           // 插件路径
 		malvusCfg:            malvusCfg,                                             // 设置Milvus配置
-	}
-
-	// 初始化日志记录器
-	err := cfg.InitLogger()
-	if err != nil {
-		// 如果初始化日志记录器失败，则打印错误信息并退出程序
-		fmt.Println("Error initializing logger: ", err)
-		os.Exit(1)
 	}
 
 	return cfg // 返回配置实例
@@ -96,21 +83,4 @@ func (c Cfg) MalvusCollectionName() string {
 func (c Cfg) SetMalvusCollectionName(collectionName string) Cfg {
 	c.malvusCfg.collectionName = collectionName
 	return c
-}
-
-// InitLogger方法初始化日志记录器
-func (c *Cfg) InitLogger() error {
-	if c.logName == "" {
-		// 如果没有指定日志文件名称，则使用默认名称
-		c.logName = "clara.log"
-	}
-	// 打开或创建日志文件
-	file, err := os.OpenFile(c.logName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err != nil {
-		// 如果打开或创建文件失败，则返回错误
-		return fmt.Errorf("failed to open log file %s for output: %s", c.logName, err)
-	}
-	c.AppLogger = logrus.New() // 创建新的logrus日志记录器实例
-	c.AppLogger.Out = file     // 设置日志输出到文件
-	return nil
 }

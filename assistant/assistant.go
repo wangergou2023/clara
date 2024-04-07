@@ -64,7 +64,7 @@ func (assistant assistant) restartConversation() {
 	response, err := assistant.sendMessage() // 发送系统提示到OpenAI并获取回复
 
 	if err != nil {
-		assistant.cfg.AppLogger.Fatalf("Error sending system prompt to OpenAI: %v", err)
+		fmt.Printf("Error sending system prompt to OpenAI: %v\n", err)
 	}
 
 	appendMessage(openai.ChatMessageRoleAssistant, response, "") // 添加助手回复到对话
@@ -158,9 +158,9 @@ func (assistant assistant) sendRequestToOpenAI() (*openai.ChatCompletionResponse
 // Start函数用于启动助手
 func Start(cfg config.Cfg, openaiClient *openai.Client) assistant {
 	if err := plugins.LoadPlugins(cfg, openaiClient); err != nil {
-		cfg.AppLogger.Fatalf("Error loading plugins: %v", err)
+		fmt.Printf("Error loading plugins: %v", err)
 	}
-	cfg.AppLogger.Info("Plugins loaded successfully")
+	fmt.Println("Plugins loaded successfully")
 	assistant := assistant{
 		cfg:                 cfg,
 		Client:              openaiClient,
@@ -169,7 +169,7 @@ func Start(cfg config.Cfg, openaiClient *openai.Client) assistant {
 
 	assistant.restartConversation()
 
-	cfg.AppLogger.Info("Assistant is ready!")
+	fmt.Println("Assistant is ready!")
 	return assistant
 
 }

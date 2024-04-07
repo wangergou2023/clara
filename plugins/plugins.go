@@ -43,7 +43,7 @@ func LoadPlugins(cfg config.Cfg, openaiClient *openai.Client) error {
 	// 遍历文件，加载.so文件作为插件
 	for _, file := range files {
 		if filepath.Ext(file.Name()) == ".so" {
-			cfg.AppLogger.Info("Loading plugin: ", file.Name())
+			fmt.Println("Loading plugin: ", file.Name())
 			err := loadSinglePlugin(cfg.PluginsPath()+"/compiled/"+file.Name(), cfg, openaiClient)
 			if err != nil {
 				return err

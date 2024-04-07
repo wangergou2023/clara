@@ -14,7 +14,7 @@ import (
 var cfg = config.New()
 
 func main() {
-	cfg.AppLogger.Info("Clara is starting up... Please wait a moment.")
+	fmt.Println("Clara is starting up... Please wait a moment.")
 
 	config := openai.DefaultConfig(cfg.OpenAiAPIKey())
 	//need"/v1"
